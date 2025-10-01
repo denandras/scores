@@ -37,41 +37,65 @@ export async function GET(req: Request) {
       credentials: { accessKeyId, secretAccessKey, sessionToken },
     });
 
-    const cmd = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix,
-      ContinuationToken: token,
-      MaxKeys: 1000,
-    });
-    const out = await s3.send(cmd);
-
     const lc = q.toLowerCase();
-    const contents = (out.Contents || []);
-    const matchesFiles = contents
-      .filter((o) => o.Key && (!prefix || o.Key !== prefix))
-      .filter((o) => (o.Key || '').toLowerCase().includes(lc))
-      .map((o) => ({
-        key: o.Key!,
-        name: o.Key!.split('/').pop() || o.Key!,
-        size: o.Size || 0,
-        lastModified: o.LastModified ? new Date(o.LastModified).toISOString() : null,
-      }));
-    // Derive matching folders from keys whose path segments include the query
+    const MAX_PAGES_SCAN = 5; // safety cap
+    const MAX_MATCHES = 200;  // return at most this many per response
+
+    let pages = 0;
+    let currentToken: string | undefined = token;
     const folderSet = new Set<string>();
-    for (const o of contents) {
-      const key = o.Key || '';
-      if (!key) continue;
-      if (!key.toLowerCase().includes(lc)) continue;
-      const parts = key.split('/');
-      if (parts.length <= 1) continue; // no folder path
-      for (let i = 0; i < parts.length - 1; i++) {
-        const seg = parts[i];
-        if ((seg || '').toLowerCase().includes(lc)) {
-          const pfx = parts.slice(0, i + 1).join('/') + '/';
-          folderSet.add(pfx);
+    const files: Array<{ key: string; name: string; size: number; lastModified: string | null }> = [];
+
+    while (pages < MAX_PAGES_SCAN && files.length < MAX_MATCHES) {
+      const out = await s3.send(new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: currentToken,
+        MaxKeys: 1000,
+      }));
+
+      const contents = out.Contents || [];
+      for (const o of contents) {
+        const key = o.Key || '';
+        if (!key) continue;
+        if (prefix && key === prefix) continue;
+
+        const keyLc = key.toLowerCase();
+        if (keyLc.includes(lc)) {
+          // file match
+          files.push({
+            key,
+            name: key.split('/').pop() || key,
+            size: o.Size || 0,
+            lastModified: o.LastModified ? new Date(o.LastModified).toISOString() : null,
+          });
+          // folder matches for any segment
+          const parts = key.split('/');
+          if (parts.length > 1) {
+            for (let i = 0; i < parts.length - 1; i++) {
+              const seg = parts[i];
+              if ((seg || '').toLowerCase().includes(lc)) {
+                const pfx = parts.slice(0, i + 1).join('/') + '/';
+                folderSet.add(pfx);
+              }
+            }
+          }
         }
       }
+
+      pages++;
+      if (out.IsTruncated && out.NextContinuationToken) {
+        currentToken = out.NextContinuationToken;
+      } else {
+        currentToken = undefined;
+        break;
+      }
+
+      // If we already found some matches, stop early to keep responses snappy
+      if (files.length >= 1 && files.length >= MAX_MATCHES) break;
+      if (files.length >= 1 && pages >= 1) break;
     }
+
     const matchesFolders = Array.from(folderSet).map((p) => ({
       key: p,
       name: p.split('/').filter(Boolean).pop() || p,
@@ -79,12 +103,23 @@ export async function GET(req: Request) {
       lastModified: null,
     }));
 
+    // underscore-first sort (like folder list) for folders only; files remain in scan order
+    matchesFolders.sort((a, b) => {
+      const an = a.name.toLowerCase();
+      const bn = b.name.toLowerCase();
+      const au = an.startsWith('_');
+      const bu = bn.startsWith('_');
+      if (au && !bu) return -1;
+      if (!au && bu) return 1;
+      return an.localeCompare(bn);
+    });
+
     return NextResponse.json({
       ok: true,
       q,
       prefix,
-      results: [...matchesFolders, ...matchesFiles],
-      nextToken: out.IsTruncated ? out.NextContinuationToken || null : null,
+      results: [...matchesFolders, ...files].slice(0, MAX_MATCHES),
+      nextToken: currentToken || null,
     });
   } catch (err: any) {
     const msg = typeof err?.message === 'string' ? err.message : 'server_error';

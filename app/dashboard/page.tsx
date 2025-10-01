@@ -96,8 +96,8 @@ function DashboardContent() {
   if (cancelled) return;
   const pageResults = data.results || [];
   setResults(pageResults);
-  // If this page has no results, hide Load more even if nextToken exists
-  setNextToken(pageResults.length > 0 ? (data.nextToken || null) : null);
+  // Keep nextToken even if this page has no matches so user can load more
+  setNextToken(data.nextToken || null);
       } catch (e:any) {
         if (!cancelled && e?.name !== 'AbortError') setError(e?.message || 'error');
       } finally {
@@ -118,8 +118,8 @@ function DashboardContent() {
   if (!data.ok) throw new Error(data.error || 'search_error');
   const pageResults = data.results || [];
   setResults((prev) => [...prev, ...pageResults]);
-  // If no results added from this page, hide the Load more button
-  setNextToken(pageResults.length > 0 ? (data.nextToken || null) : null);
+  // Keep nextToken even when this page has zero matches; allow user to continue
+  setNextToken(data.nextToken || null);
     } catch (e:any) {
       setError(e?.message || 'error');
     } finally {
@@ -188,9 +188,9 @@ function DashboardContent() {
 
         <section style={{ marginTop: 16 }}>
           <div style={{ ...styles.tableWrap, position: 'relative' as const }}>
-            <div style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(180px,1fr) minmax(180px,1fr) 120px 120px' }}>
-              <div>Name</div>
-              <div>
+            <div className="tbsl-header" style={{ ...styles.tableHeader }}>
+              <div className="tbsl-h-name">Name</div>
+              <div className="tbsl-h-search">
                 <div style={{ position: 'relative' }}>
                   <input
                     className="tbsl-search-input"
@@ -222,8 +222,8 @@ function DashboardContent() {
                   )}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>Size</div>
-              <div style={{ textAlign: 'right' }}>{q ? (
+              <div className="tbsl-h-size" style={{ textAlign: 'right' }}>Size</div>
+              <div className="tbsl-h-action" style={{ textAlign: 'right' }}>{q ? (
                 <button onClick={clearSearch} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Clear</button>
               ) : 'Action'}</div>
             </div>
