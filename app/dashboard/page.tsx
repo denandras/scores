@@ -171,18 +171,17 @@ function DashboardContent() {
           </div>
         </header>
 
-        {!q && (
         <nav aria-label="Breadcrumb" style={{ marginTop: 16, fontSize: 14 }}>
           {crumbs.map((c, i) => (
             <span key={c.pfx}>
               {i > 0 && ' / '}
-              <a href="#" onClick={(e)=>{e.preventDefault(); go(c.pfx);}}>
+              <a href="#" onClick={(e)=>{e.preventDefault(); if (q) clearSearch(); go(c.pfx);}}>
                 {i === 0 ? '🏠' : c.name}
               </a>
             </span>
           ))}
         </nav>
-        )}
+        
 
         {/* Top synthetic folder-like rows: Home (🏠) and Up (⬆️) */}
 
