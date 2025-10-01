@@ -32,6 +32,7 @@
   .tbsl-h-size{ grid-area: size; }
   .tbsl-h-action{ grid-area: action; }
   @media (min-width: 640px){
-    .tbsl-header{ grid-template-columns: minmax(180px,1fr) minmax(180px,1fr) 120px 120px; grid-template-areas: 'name search size action'; }
+    /* Name column fits content, Search expands to fill between Name and Size */
+    .tbsl-header{ grid-template-columns: auto 1fr 120px 120px; grid-template-areas: 'name search size action'; }
   }
 }

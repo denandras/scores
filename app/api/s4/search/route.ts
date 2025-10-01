@@ -24,9 +24,13 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const q = (url.searchParams.get('q') || '').trim();
-    const token = url.searchParams.get('token') || undefined;
+  const token = url.searchParams.get('token') || undefined;
     // optional prefix to constrain the scan (still searches all when empty)
     const prefix = (url.searchParams.get('prefix') || '').replace(/^\/+/, '');
+  // search scope: 'basename' (default) or 'path'
+  const scope = (url.searchParams.get('scope') || 'basename').toLowerCase();
+  // filter by extensions, comma-separated (default: pdf only)
+  const exts = (url.searchParams.get('exts') || 'pdf').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 
     if (!q) return NextResponse.json({ ok: false, error: 'query_required' }, { status: 400 });
 
@@ -43,8 +47,8 @@ export async function GET(req: Request) {
 
     let pages = 0;
     let currentToken: string | undefined = token;
-    const folderSet = new Set<string>();
-    const files: Array<{ key: string; name: string; size: number; lastModified: string | null }> = [];
+  const folderSet = new Set<string>();
+  const files: Array<{ key: string; name: string; size: number; lastModified: string | null }> = [];
 
     while (pages < MAX_PAGES_SCAN && files.length < MAX_MATCHES) {
       const out = await s3.send(new ListObjectsV2Command({
@@ -61,11 +65,15 @@ export async function GET(req: Request) {
         if (prefix && key === prefix) continue;
 
         const keyLc = key.toLowerCase();
-        if (keyLc.includes(lc)) {
+        const base = key.split('/').pop() || key;
+        const baseLc = base.toLowerCase();
+        const matchesText = (scope === 'path' ? keyLc : baseLc).includes(lc);
+        const matchesExt = exts.length ? exts.some(ext => baseLc.endsWith('.' + ext)) : true;
+        if (matchesText && matchesExt) {
           // file match
           files.push({
             key,
-            name: key.split('/').pop() || key,
+            name: base,
             size: o.Size || 0,
             lastModified: o.LastModified ? new Date(o.LastModified).toISOString() : null,
           });
@@ -103,8 +111,19 @@ export async function GET(req: Request) {
       lastModified: null,
     }));
 
-    // underscore-first sort (like folder list) for folders only; files remain in scan order
+    // underscore-first sort for folders
     matchesFolders.sort((a, b) => {
+      const an = a.name.toLowerCase();
+      const bn = b.name.toLowerCase();
+      const au = an.startsWith('_');
+      const bu = bn.startsWith('_');
+      if (au && !bu) return -1;
+      if (!au && bu) return 1;
+      return an.localeCompare(bn);
+    });
+
+    // underscore-first sort for files as well
+    files.sort((a, b) => {
       const an = a.name.toLowerCase();
       const bn = b.name.toLowerCase();
       const au = an.startsWith('_');

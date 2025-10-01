@@ -90,7 +90,7 @@ function DashboardContent() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+  const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&scope=basename&exts=pdf`, { signal: controller.signal });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
         const data = await res.json();
   if (cancelled) return;
@@ -112,7 +112,7 @@ function DashboardContent() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&token=${encodeURIComponent(nextToken)}`);
+  const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&scope=basename&exts=pdf&token=${encodeURIComponent(nextToken)}`);
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'search_error');
