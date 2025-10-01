@@ -90,7 +90,7 @@ function DashboardContent() {
       try {
         setLoading(true);
         setError(null);
-  const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&scope=basename&exts=pdf`, { signal: controller.signal });
+  const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&scope=path&exts=pdf`, { signal: controller.signal });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
         const data = await res.json();
   if (cancelled) return;
@@ -112,7 +112,7 @@ function DashboardContent() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&scope=basename&exts=pdf&token=${encodeURIComponent(nextToken)}`);
+  const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&scope=path&exts=pdf&token=${encodeURIComponent(nextToken)}`);
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'search_error');
@@ -228,18 +228,7 @@ function DashboardContent() {
               ) : 'Action'}</div>
             </div>
 
-            {/* Loading overlay to avoid confusing stale content during navigation */}
-            {loading && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'rgba(255,255,255,0.6)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, color: theme.color.muted,
-                pointerEvents: 'none',
-              }}>
-                Loading…
-              </div>
-            )}
+            {/* Removed overlay: avoid covering header between Name and Search */}
             {/* Home row removed; we now show 🏠 in the breadcrumb and only keep Up in the list */}
 
             {/* Up row (only if not at root) */}

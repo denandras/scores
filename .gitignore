@@ -27,3 +27,4 @@ Thumbs.db
 
 # Project-specific ignores
 SUMMARY.txt
+files/templates/

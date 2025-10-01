@@ -42,8 +42,8 @@ export async function GET(req: Request) {
     });
 
     const lc = q.toLowerCase();
-    const MAX_PAGES_SCAN = 5; // safety cap
-    const MAX_MATCHES = 200;  // return at most this many per response
+  const MAX_PAGES_SCAN = 15; // scan more pages to improve coverage
+  const MAX_MATCHES = 300;   // return at most this many per response
 
     let pages = 0;
     let currentToken: string | undefined = token;
