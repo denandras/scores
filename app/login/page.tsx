@@ -1,11 +1,11 @@
 "use client";
 
 import { supabase } from "@/lib/supabaseClient";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { styles, theme } from "@/components/ui/theme";
 import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,5 +110,13 @@ export default function LoginPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main style={{ padding: theme.space(8) }}><p style={{ color: theme.color.muted }}>Loading…</p></main>}>
+      <LoginContent />
+    </Suspense>
   );
 }

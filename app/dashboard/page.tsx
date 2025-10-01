@@ -1,13 +1,13 @@
 "use client";
 
 import AuthGate from "@/components/AuthGate";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function DashboardPage() {
+function DashboardContent() {
   // Simple S3 browser: list folders/files and navigate prefixes.
   const [prefix, setPrefix] = useState<string>("");
   const [folders, setFolders] = useState<string[]>([]);
@@ -155,7 +155,6 @@ export default function DashboardPage() {
   };
 
   return (
-    <AuthGate>
       <main style={{ padding: "2rem 0" }}>
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' as const }}>
           <div>
@@ -194,6 +193,7 @@ export default function DashboardPage() {
               <div>
                 <div style={{ position: 'relative' }}>
                   <input
+                    className="tbsl-search-input"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="Search…"
@@ -281,7 +281,7 @@ export default function DashboardPage() {
                   style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                 >
                   <span style={{ fontSize: 20 }}>📁</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  <span className="tbsl-filename" style={{ fontWeight: 600 }}>
                     {f.replace(/\/$/, '')}
                   </span>
                 </a>
@@ -307,7 +307,7 @@ export default function DashboardPage() {
                   style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                 >
                   <span style={{ fontSize: 20 }}>📄</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                  <span className="tbsl-filename">{f.name}</span>
                 </a>
                 <div style={{ textAlign: 'right' }}>{formatBytes(f.size)}</div>
                 <div style={{ textAlign: 'right' }}>
@@ -336,7 +336,7 @@ export default function DashboardPage() {
                       style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                     >
                       <span style={{ fontSize: 20 }}>📁</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{display}</span>
+                      <span className="tbsl-filename" style={{ fontWeight: 600 }}>{display}</span>
                     </a>
                   ) : (
                     <a
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                       style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                     >
                       <span style={{ fontSize: 20 }}>📄</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
+                      <span className="tbsl-filename">{display}</span>
                     </a>
                   )}
                   <div style={{ textAlign: 'right' }}>{folder ? <span style={{ color: theme.color.muted }}>—</span> : formatBytes(f.size)}</div>
@@ -371,6 +371,15 @@ export default function DashboardPage() {
           )}
         </section>
       </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <AuthGate>
+      <Suspense fallback={<main style={{ padding: "2rem 0" }}><p style={{ color: theme.color.muted, padding: 16 }}>Loading…</p></main>}>
+        <DashboardContent />
+      </Suspense>
     </AuthGate>
   );
 }

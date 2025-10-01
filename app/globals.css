@@ -15,4 +15,13 @@
 
   .header-glass{ @apply sticky top-0 z-10 backdrop-blur-xl bg-white/70 border-b border-white/60; }
   .glass-lift{ @apply bg-white/70 backdrop-blur-md border border-white/60 shadow-glass; }
+  .tbsl-search-input::placeholder{ color: #cbd5e1; /* Tailwind slate-300 (lighter) */ }
+  /* Allow slightly longer filenames on mobile, truncate on larger screens */
+  .tbsl-filename{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 420px){
+    .tbsl-filename{ mask-image: linear-gradient(to right, black 92%, transparent); -webkit-mask-image: linear-gradient(to right, black 92%, transparent); font-size: 0.95em; }
+  }
+  @media (min-width: 421px){
+    .tbsl-filename{ max-width: 48ch; display: inline-block; }
+  }
 }

@@ -144,7 +144,11 @@ export default function UploadPage() {
                     ...(file ? { background: theme.color.panel } : {}),
                   }}
                 >
-                  {file ? `${file.name}` : 'Choose PDF file'}
+                  {file ? (
+                    <span className="tbsl-filename" title={file.name} style={{ display: 'inline-block', maxWidth: '100%' }}>
+                      {file.name}
+                    </span>
+                  ) : 'Choose PDF file'}
                 </button>
               </div>
 
