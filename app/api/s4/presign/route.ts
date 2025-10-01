@@ -11,8 +11,12 @@ const accessKeyId = (process.env.S4_ACCESS_KEY_ID || '').trim();
 const secretAccessKey = (process.env.S4_SECRET_ACCESS_KEY || '').trim();
 const sessionToken = (process.env.S4_SESSION_TOKEN || '').trim() || undefined;
 const bucket = (process.env.S4_BUCKET || '').trim();
-// Use S4_PREFIX if provided, else default to 'uploads/'
-const envPrefix = process.env.S4_PREFIX || '01 Upload/';
+// Use S4_PREFIX if provided, else fall back to legacy keys or default
+const envPrefixRaw = (process.env.S4_PREFIX
+  ?? process.env.S4_UPLOAD_PREFIX
+  ?? process.env.UPLOAD_PREFIX
+  ?? '01 Upload/');
+const envPrefix = (envPrefixRaw || '').trim();
 const fixedPrefix = envPrefix.endsWith('/') ? envPrefix : envPrefix + '/';
 
 function required(name: string, value: any) {
