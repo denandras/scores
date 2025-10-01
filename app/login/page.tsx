@@ -1,14 +1,17 @@
 "use client";
 
 import { supabase } from "@/lib/supabaseClient";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { styles, theme } from "@/components/ui/theme";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const sp = useSearchParams();
+  const expired = useMemo(() => (sp?.get('expired') === '1'), [sp]);
 
   const sendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +44,18 @@ export default function LoginPage() {
           padding: '1.25rem',
         }}>
           <h1 style={{ margin: 0, fontSize: '1.875rem', letterSpacing: 0.2 }}>Sign in</h1>
+          {expired && (
+            <div style={{
+              marginTop: 10,
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: `1px solid ${theme.color.border}`,
+              background: '#fff8f8'
+            }}>
+              <div style={{ fontWeight: 600, color: '#b00020' }}>Your magic link expired</div>
+              <div style={{ marginTop: 4, color: theme.color.text }}>Please request a new sign-in link below.</div>
+            </div>
+          )}
           <p style={{ marginTop: 8, color: theme.color.muted }}>
             Enter your email address. If it’s allowlisted, you’ll receive a sign-in link.
           </p>

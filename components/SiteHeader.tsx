@@ -8,6 +8,7 @@ import { styles, theme } from "@/components/ui/theme";
 export default function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // No router or search params needed in simplified header
 
   useEffect(() => {
     let unsub = () => {};
@@ -23,40 +24,50 @@ export default function SiteHeader() {
     return () => unsub();
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    // ensure we land on login after sign out
-    window.location.replace('/login');
-  };
+  // No explicit sign-in/out buttons in header per requirements
+
+  // No search synchronization in header anymore
+
+  const username = email ? (email.split('@')[0] || email) : null;
 
   return (
     <header className="header-glass" style={{ zIndex: 10 }}>
-      <div style={styles.container}>
+      <div style={{
+        ...styles.container,
+        display: 'grid',
+        // Three columns: left and right flex, center auto -> center stays mathematically centered
+        gridTemplateColumns: '1fr auto 1fr',
+        alignItems: 'center',
+        gap: 8,
+      }}>
         {/* Left: Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <Link href="/" style={styles.brandLink}>TBSL</Link>
         </div>
-        {/* Center: User email */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          {!loading && email && (
-            <span style={{ fontSize: 14, color: theme.color.text }}>{email}</span>
+        {/* Center: Username (true center in header) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 0 }}>
+          {/* Username (from email local-part) */}
+          {!loading && username && (
+            <span title={email || undefined} style={{
+              fontSize: 14,
+              color: theme.color.text,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '40ch',
+            }}>{username}</span>
           )}
         </div>
 
-        {/* Right: Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Right: Actions (compact on mobile) - no sign in/out */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' as const, justifySelf: 'end' }}>
           {loading ? (
             <span style={{ color: theme.color.muted }}>…</span>
-          ) : email ? (
-            <>
-              <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Upload</Link>
-              <a href="https://ko-fi.com/scorelibrary" target="_blank" rel="noopener noreferrer" style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Support</a>
-              <button onClick={signOut} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Sign out</button>
-            </>
           ) : (
             <>
-              <a href="https://ko-fi.com/scorelibrary" target="_blank" rel="noopener noreferrer" style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Support</a>
-              <Link href="/login" style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Sign in</Link>
+              {/* Upload visible; AuthGate on /upload protects access */}
+              <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Upload</Link>
+              <a href="https://ko-fi.com/scorelibrary" target="_blank" rel="noopener noreferrer" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Support</a>
             </>
           )}
         </div>

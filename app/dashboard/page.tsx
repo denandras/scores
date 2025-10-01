@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function DashboardPage() {
   // Simple S3 browser: list folders/files and navigate prefixes.
@@ -13,6 +14,11 @@ export default function DashboardPage() {
   const [files, setFiles] = useState<Array<{key:string;name:string;size:number;lastModified:string|null}>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<Array<{key:string;name:string;size:number;lastModified:string|null}>>([]);
+  const [nextToken, setNextToken] = useState<string | null>(null);
+  const sp = useSearchParams();
+  const router = useRouter();
+  const [q, setQ] = useState<string>((sp?.get('q') || '').trim());
 
   const crumbs = useMemo(() => {
     const parts = prefix.split('/').filter(Boolean);
@@ -64,9 +70,77 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => { load(prefix); }, [prefix]);
+  useEffect(() => {
+    // If searching, skip folder browser
+    if (q) return;
+    load(prefix);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefix, q]);
 
-  const go = (p: string) => setPrefix(p);
+  // Search loader when q present
+  useEffect(() => {
+    if (!q) {
+      setResults([]);
+      setNextToken(null);
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    const id = setTimeout(async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+        const data = await res.json();
+  if (cancelled) return;
+  const pageResults = data.results || [];
+  setResults(pageResults);
+  // If this page has no results, hide Load more even if nextToken exists
+  setNextToken(pageResults.length > 0 ? (data.nextToken || null) : null);
+      } catch (e:any) {
+        if (!cancelled && e?.name !== 'AbortError') setError(e?.message || 'error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 200); // small debounce for live search
+    return () => { cancelled = true; controller.abort(); clearTimeout(id); };
+  }, [q]);
+
+  const loadMore = async () => {
+    if (!q || !nextToken) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/s4/search?q=${encodeURIComponent(q)}&token=${encodeURIComponent(nextToken)}`);
+      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'search_error');
+  const pageResults = data.results || [];
+  setResults((prev) => [...prev, ...pageResults]);
+  // If no results added from this page, hide the Load more button
+  setNextToken(pageResults.length > 0 ? (data.nextToken || null) : null);
+    } catch (e:any) {
+      setError(e?.message || 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const go = (p: string) => {
+    // Immediately reflect navigation intent
+    setPrefix(p);
+    // Clear previous content to avoid showing stale rows
+    setFolders([]);
+    setFiles([]);
+    setResults([]);
+    setNextToken(null);
+    setError(null);
+    setLoading(true);
+  };
+  const clearSearch = () => setQ('');
+  const isFolderKey = (key: string) => /\/$/.test(key);
+  const lastSegment = (key: string) => key.replace(/\/$/, '').split('/').pop() || key;
 
   const download = async (key: string) => {
     try {
@@ -85,11 +159,20 @@ export default function DashboardPage() {
       <main style={{ padding: "2rem 0" }}>
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' as const }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: "2rem", letterSpacing: 0.2 }}>TBSL — The Brass Score Library</h1>
-            <p style={{ marginTop: 6, color: theme.color.muted }}>Upload, browse, and download brass scores.</p>
+            <h1 style={{ margin: 0, fontSize: "2rem", letterSpacing: 0.2 }}>The Brass Score Library</h1>
+            {(() => {
+              const base = 'Upload, browse, and download brass scores.';
+              let text: string = base;
+              let color: string = theme.color.muted as string;
+              if (error) { text = error; color = '#b00020'; }
+              else if (loading) { text = 'Loading…'; }
+              else if (q && results.length === 0) { text = 'No results'; }
+              return <p style={{ marginTop: 6, color }}>{text}</p>;
+            })()}
           </div>
         </header>
 
+        {!q && (
         <nav aria-label="Breadcrumb" style={{ marginTop: 16, fontSize: 14 }}>
           {crumbs.map((c, i) => (
             <span key={c.pfx}>
@@ -100,24 +183,67 @@ export default function DashboardPage() {
             </span>
           ))}
         </nav>
+        )}
 
         {/* Top synthetic folder-like rows: Home (🏠) and Up (⬆️) */}
 
-  {loading && <p style={{ marginTop: 20, color: theme.color.muted }}>Loading…</p>}
-  {error && <p style={{ marginTop: 20, color: '#b00020' }}>{error}</p>}
-
         <section style={{ marginTop: 16 }}>
-          <div style={styles.tableWrap}>
-            <div style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(200px,1fr) 120px 120px' }}>
+          <div style={{ ...styles.tableWrap, position: 'relative' as const }}>
+            <div style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(180px,1fr) minmax(180px,1fr) 120px 120px' }}>
               <div>Name</div>
+              <div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Search…"
+                    aria-label="Search in bucket"
+                    style={{
+                      width: '100%',
+                      padding: '6px 28px 6px 10px',
+                      borderRadius: theme.radius.sm,
+                      border: `1px solid ${theme.color.border}`,
+                      background: theme.color.bg,
+                      color: theme.color.text,
+                    }}
+                  />
+                  {q && (
+                    <button
+                      onClick={clearSearch}
+                      aria-label="Clear search"
+                      style={{
+                        position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                        ...styles.buttonBase, ...styles.buttonGhost,
+                        padding: '2px 6px', fontSize: 12,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
               <div style={{ textAlign: 'right' }}>Size</div>
-              <div style={{ textAlign: 'right' }}>Action</div>
+              <div style={{ textAlign: 'right' }}>{q ? (
+                <button onClick={clearSearch} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Clear</button>
+              ) : 'Action'}</div>
             </div>
 
+            {/* Loading overlay to avoid confusing stale content during navigation */}
+            {loading && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'rgba(255,255,255,0.6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, color: theme.color.muted,
+                pointerEvents: 'none',
+              }}>
+                Loading…
+              </div>
+            )}
             {/* Home row removed; we now show 🏠 in the breadcrumb and only keep Up in the list */}
 
             {/* Up row (only if not at root) */}
-            {prefix && (
+            {!q && prefix && (
               <div
                 style={{
                   ...styles.tableRow,
@@ -140,7 +266,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {folders.map((f, idx) => (
+            {!q && folders.map((f, idx) => (
               <div
                 key={f}
                 style={{
@@ -166,7 +292,7 @@ export default function DashboardPage() {
               </div>
             ))}
 
-            {files.map((f, idx) => (
+            {!q && files.map((f, idx) => (
               <div
                 key={f.key}
                 style={{
@@ -176,8 +302,8 @@ export default function DashboardPage() {
                 }}
               >
                 <a
-                  href="#"
-                  onClick={(e)=>{e.preventDefault(); download(f.key);}}
+                  href={`/api/s4/view?key=${encodeURIComponent(f.key)}`}
+                  target="_blank" rel="noopener noreferrer"
                   style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                 >
                   <span style={{ fontSize: 20 }}>📄</span>
@@ -185,13 +311,63 @@ export default function DashboardPage() {
                 </a>
                 <div style={{ textAlign: 'right' }}>{formatBytes(f.size)}</div>
                 <div style={{ textAlign: 'right' }}>
-                  <button onClick={() => download(f.key)} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Download</button>
+                  <a href={`/api/s4/download?key=${encodeURIComponent(f.key)}`} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Download</a>
                 </div>
               </div>
             ))}
+
+            {/* Search results list */}
+            {q && results.map((f, idx) => {
+              const folder = isFolderKey(f.key);
+              const display = folder ? lastSegment(f.key) : (f.name || lastSegment(f.key));
+              return (
+                <div
+                  key={`${f.key}-${idx}`}
+                  style={{
+                    ...styles.tableRow,
+                    gridTemplateColumns: 'minmax(200px,1fr) 120px 120px',
+                    background: (idx % 2 === 0) ? theme.color.bg : theme.color.surface,
+                  }}
+                >
+                  {folder ? (
+                    <a
+                      href="#"
+                      onClick={(e)=>{e.preventDefault(); go(f.key); clearSearch();}}
+                      style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
+                    >
+                      <span style={{ fontSize: 20 }}>📁</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{display}</span>
+                    </a>
+                  ) : (
+                    <a
+                      href={`/api/s4/view?key=${encodeURIComponent(f.key)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
+                    >
+                      <span style={{ fontSize: 20 }}>📄</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
+                    </a>
+                  )}
+                  <div style={{ textAlign: 'right' }}>{folder ? <span style={{ color: theme.color.muted }}>—</span> : formatBytes(f.size)}</div>
+                  <div style={{ textAlign: 'right' }}>
+                    {folder ? (
+                      <a href="#" onClick={(e)=>{e.preventDefault(); go(f.key); clearSearch();}} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Open</a>
+                    ) : (
+                      <a href={`/api/s4/download?key=${encodeURIComponent(f.key)}`} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Download</a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {!loading && folders.length === 0 && files.length === 0 && (
+          {!loading && !q && folders.length === 0 && files.length === 0 && (
             <p style={{ color: theme.color.muted, marginTop: 12 }}>Empty here.</p>
+          )}
+          {/* No separate no-results here; shown in the loading area above */}
+          {q && nextToken && (
+            <div style={{ marginTop: 12 }}>
+              <button onClick={loadMore} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Load more</button>
+            </div>
           )}
         </section>
       </main>
