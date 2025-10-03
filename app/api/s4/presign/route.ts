@@ -15,7 +15,7 @@ const bucket = (process.env.S4_BUCKET || '').trim();
 const envPrefixRaw = (process.env.S4_PREFIX
   ?? process.env.S4_UPLOAD_PREFIX
   ?? process.env.UPLOAD_PREFIX
-  ?? '01 Upload/');
+  ?? '01 Uploads/');
 const envPrefix = (envPrefixRaw || '').trim();
 const fixedPrefix = envPrefix.endsWith('/') ? envPrefix : envPrefix + '/';
 
@@ -74,7 +74,8 @@ export async function POST(req: Request) {
       if (inferred) safeName += inferred;
     }
 
-  // Single folder "uploads/" with date-time-second prefix
+  // Upload target folder prefix: defaults to env (S4_PREFIX / S4_UPLOAD_PREFIX / UPLOAD_PREFIX) or '01 Upload/'.
+  // We add a date-time-second prefix to keep names unique while still sortable.
   const now = new Date();
   const yyyy = String(now.getUTCFullYear());
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0');

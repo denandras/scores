@@ -12,7 +12,7 @@ const bucket = (process.env.S4_BUCKET || '').trim();
 const envPrefixRaw = (process.env.S4_PREFIX
   ?? process.env.S4_UPLOAD_PREFIX
   ?? process.env.UPLOAD_PREFIX
-  ?? '01 Upload/');
+  ?? '01 Uploads/');
 const envPrefix = (envPrefixRaw || '').trim();
 const fixedPrefix = envPrefix.endsWith('/') ? envPrefix : envPrefix + '/';
 
