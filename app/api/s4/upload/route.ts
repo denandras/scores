@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { resolveUploadPrefix } from '@/lib/uploadPrefix';
 
 export const runtime = 'nodejs';
 
@@ -9,12 +10,7 @@ const accessKeyId = (process.env.S4_ACCESS_KEY_ID || '').trim();
 const secretAccessKey = (process.env.S4_SECRET_ACCESS_KEY || '').trim();
 const sessionToken = (process.env.S4_SESSION_TOKEN || '').trim() || undefined;
 const bucket = (process.env.S4_BUCKET || '').trim();
-const envPrefixRaw = (process.env.S4_PREFIX
-  ?? process.env.S4_UPLOAD_PREFIX
-  ?? process.env.UPLOAD_PREFIX
-  ?? '01 Uploads/');
-const envPrefix = (envPrefixRaw || '').trim();
-const fixedPrefix = envPrefix.endsWith('/') ? envPrefix : envPrefix + '/';
+const fixedPrefix = resolveUploadPrefix();
 
 function required(name: string, value: any) {
   if (!value) throw new Error(`Missing env: ${name}`);

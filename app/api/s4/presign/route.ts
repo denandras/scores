@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
+import { resolveUploadPrefix } from '@/lib/uploadPrefix';
 
 export const runtime = 'nodejs';
 
@@ -11,13 +12,8 @@ const accessKeyId = (process.env.S4_ACCESS_KEY_ID || '').trim();
 const secretAccessKey = (process.env.S4_SECRET_ACCESS_KEY || '').trim();
 const sessionToken = (process.env.S4_SESSION_TOKEN || '').trim() || undefined;
 const bucket = (process.env.S4_BUCKET || '').trim();
-// Use S4_PREFIX if provided, else fall back to legacy keys or default
-const envPrefixRaw = (process.env.S4_PREFIX
-  ?? process.env.S4_UPLOAD_PREFIX
-  ?? process.env.UPLOAD_PREFIX
-  ?? '01 Uploads/');
-const envPrefix = (envPrefixRaw || '').trim();
-const fixedPrefix = envPrefix.endsWith('/') ? envPrefix : envPrefix + '/';
+// Resolve upload prefix (centralized logic in lib/uploadPrefix.ts)
+const fixedPrefix = resolveUploadPrefix();
 
 function required(name: string, value: any) {
   if (!value) throw new Error(`Missing env: ${name}`);
@@ -74,7 +70,7 @@ export async function POST(req: Request) {
       if (inferred) safeName += inferred;
     }
 
-  // Upload target folder prefix: defaults to env (S4_PREFIX / S4_UPLOAD_PREFIX / UPLOAD_PREFIX) or '01 Upload/'.
+  // Upload target folder prefix: defaults to env (S4_PREFIX / S4_UPLOAD_PREFIX / UPLOAD_PREFIX) or '01 Uploads/'.
   // We add a date-time-second prefix to keep names unique while still sortable.
   const now = new Date();
   const yyyy = String(now.getUTCFullYear());

@@ -30,7 +30,7 @@ Open http://localhost:3000.
 The Dashboard provides a minimal S3 browser and a global search.
 
 - Breadcrumbs: shows current prefix; click segments to navigate up.
-- Folder list: underscore-first sort (e.g., `_uploads` before others), then A→Z.
+- Folder list: underscore-first sort (any folder starting with `_` appears first), then A→Z.
 - File list: shows size and a Download action. Names truncate gracefully on mobile.
 - “Up” row: appears when not at root to go one level up.
 - Loading overlay: prevents flicker while navigating or searching.

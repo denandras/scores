@@ -45,7 +45,7 @@ function DashboardContent() {
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'list_error');
       const list: string[] = data.folders || [];
-      // underscore-first sort (e.g., _uploads first), then alphabetical
+  // underscore-first sort (e.g., folders starting with '_' appear first), then alphabetical
       list.sort((a: string, b: string) => {
         const an = a.toLowerCase();
         const bn = b.toLowerCase();
