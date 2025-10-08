@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveUploadPrefix } from '@/lib/uploadPrefix';
 
 export const runtime = 'nodejs';
 
@@ -16,17 +17,28 @@ export async function GET() {
   const secretAccessKey = (process.env.S4_SECRET_ACCESS_KEY || '').trim();
   const sessionToken = (process.env.S4_SESSION_TOKEN || '').trim();
   const bucket = (process.env.S4_BUCKET || '').trim();
-  const prefix = (process.env.S4_PREFIX || '').trim();
+  const prefixRaw = (process.env.S4_PREFIX || '').trim();
+  const alt1 = (process.env.S4_UPLOAD_PREFIX || '').trim();
+  const alt2 = (process.env.UPLOAD_PREFIX || '').trim();
+  const resolvedPrefix = resolveUploadPrefix();
+  let resolvedSource: string = 'default';
+  if (prefixRaw) resolvedSource = 'S4_PREFIX';
+  else if (alt1) resolvedSource = 'S4_UPLOAD_PREFIX';
+  else if (alt2) resolvedSource = 'UPLOAD_PREFIX';
 
   return NextResponse.json({
     endpoint,
     region,
-    bucket,
-    prefix,
+  bucket,
+  prefix: prefixRaw,
+  altUploadPrefix: alt1 || null,
+  altUploadPrefix2: alt2 || null,
+  resolvedPrefix,
+  resolvedSource,
     hasEndpoint: !!endpoint,
     hasRegion: !!region,
-    hasBucket: !!bucket,
-    hasPrefix: !!prefix,
+  hasBucket: !!bucket,
+  hasPrefix: !!prefixRaw || !!alt1 || !!alt2,
     hasAccessKeyId: !!accessKeyId,
     hasSecretAccessKey: !!secretAccessKey,
     hasSessionToken: !!sessionToken,
