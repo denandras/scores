@@ -11,6 +11,11 @@ const secretAccessKey = (process.env.S4_SECRET_ACCESS_KEY || '').trim();
 const sessionToken = (process.env.S4_SESSION_TOKEN || '').trim() || undefined;
 const bucket = (process.env.S4_BUCKET || '').trim();
 const fixedPrefix = resolveUploadPrefix();
+// For diagnostics: determine which env var produced the prefix
+let fixedSource: string = 'default';
+if (process.env.S4_PREFIX) fixedSource = 'S4_PREFIX';
+else if (process.env.S4_UPLOAD_PREFIX) fixedSource = 'S4_UPLOAD_PREFIX';
+else if (process.env.UPLOAD_PREFIX) fixedSource = 'UPLOAD_PREFIX';
 
 function required(name: string, value: any) {
   if (!value) throw new Error(`Missing env: ${name}`);
@@ -61,7 +66,7 @@ export async function POST(req: Request) {
     const cmd = new PutObjectCommand({ Bucket: bucket, Key: key, Body: Buffer.from(body), ContentType: contentType });
     await s3.send(cmd);
 
-    return NextResponse.json({ ok: true, key, contentType, filename: safeName });
+  return NextResponse.json({ ok: true, key, contentType, filename: safeName, resolvedPrefix: fixedPrefix, resolvedSource: fixedSource });
   } catch (err: any) {
     const msg = typeof err?.message === 'string' ? err.message : 'server_error';
     const name = err?.name;

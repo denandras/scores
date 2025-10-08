@@ -14,6 +14,10 @@ const sessionToken = (process.env.S4_SESSION_TOKEN || '').trim() || undefined;
 const bucket = (process.env.S4_BUCKET || '').trim();
 // Resolve upload prefix (centralized logic in lib/uploadPrefix.ts)
 const fixedPrefix = resolveUploadPrefix();
+let fixedSource: string = 'default';
+if (process.env.S4_PREFIX) fixedSource = 'S4_PREFIX';
+else if (process.env.S4_UPLOAD_PREFIX) fixedSource = 'S4_UPLOAD_PREFIX';
+else if (process.env.UPLOAD_PREFIX) fixedSource = 'UPLOAD_PREFIX';
 
 function required(name: string, value: any) {
   if (!value) throw new Error(`Missing env: ${name}`);
@@ -121,7 +125,7 @@ export async function POST(req: Request) {
 
   const url = await getSignedUrl(s3Reg, cmd, { expiresIn: 60 * 5 }); // 5 minutes
 
-    return NextResponse.json({ url, key, contentType, filename: safeName });
+  return NextResponse.json({ url, key, contentType, filename: safeName, resolvedPrefix: fixedPrefix, resolvedSource: fixedSource });
   } catch (err: any) {
     const msg = typeof err?.message === 'string' ? err.message : 'server_error';
     return NextResponse.json({ error: msg }, { status: 500 });
