@@ -6,7 +6,6 @@ export const metadata = {
 };
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
-import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,7 +30,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
         <SiteFooter />
-        <Analytics />
       </body>
     </html>
   );
