@@ -55,7 +55,7 @@ function SearchContent() {
           {(() => {
             let text: string;
             let color: string = theme.color.muted as string;
-            if (error) { text = error; color = '#b00020'; }
+            if (error) { text = 'Search is currently unavailable, possible cause: database is being updated'; color = '#b00020'; }
             else if (loading) { text = 'Searching…'; }
             else if (results.length > 0) { text = `Found ${results.length}${results.length === 100 ? '+' : ''} result${results.length === 1 ? '' : 's'}`; }
             else if (hasSearched && keyword.trim()) { text = 'No results found'; }
