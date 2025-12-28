@@ -37,7 +37,7 @@ export async function GET(req: Request) {
       Prefix: prefix,
       Delimiter: '/',
       ContinuationToken: token,
-      MaxKeys: 1000,
+      MaxKeys: 100,
     });
     const out = await s3.send(cmd);
 

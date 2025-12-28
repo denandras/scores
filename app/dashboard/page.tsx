@@ -2,7 +2,6 @@
 
 import AuthGate from "@/components/AuthGate";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
 
@@ -107,33 +106,15 @@ function DashboardContent() {
               return <p style={{ marginTop: 6, color }}>{text}</p>;
             })()}
           </div>
-        </header>
-
-        <nav aria-label="Breadcrumb" style={{ marginTop: 16, fontSize: 14 }}>
-          {crumbs.map((c, i) => (
-            <span key={c.pfx}>
-              {i > 0 && ' / '}
-              <a href="#" onClick={(e)=>{e.preventDefault(); go(c.pfx);}}>
-                {i === 0 ? '🏠' : c.name}
-              </a>
-            </span>
-          ))}
-        </nav>
-        
-
-        {/* Top synthetic folder-like rows: Home (🏠) and Up (⬆️) */}
+      </header>
 
         <section style={{ marginTop: 16 }}>
-          <div style={{ ...styles.tableWrap, position: 'relative' as const }}>
+          <div style={{ ...styles.tableWrap, position: 'relative' }}>
             <div className="tbsl-header" style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(200px,1fr) 120px 120px' }}>
               <div className="tbsl-h-name">Name</div>
               <div className="tbsl-h-size" style={{ textAlign: 'right' }}>Size</div>
               <div className="tbsl-h-action" style={{ textAlign: 'right' }}>Action</div>
             </div>
-
-            {/* Removed overlay: avoid covering header between Name and Search */}
-            {/* Home row removed; we now show 🏠 in the breadcrumb and only keep Up in the list */}
-
             {/* Up row (only if not at root) */}
             {prefix && (
               <div
@@ -198,7 +179,7 @@ function DashboardContent() {
                   target="_blank" rel="noopener noreferrer"
                   style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                 >
-                  <span style={{ fontSize: 20 }}>📄</span>
+                  <span style={{ fontSize: 20 }}>{f.name.toLowerCase().endsWith('.zip') ? '📦' : '📄'}</span>
                   <span className="tbsl-filename">{f.name}</span>
                 </a>
                 <div style={{ textAlign: 'right' }}>{formatBytes(f.size)}</div>

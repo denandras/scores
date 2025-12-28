@@ -13,8 +13,7 @@ export default function SiteFooter() {
         gap: 8,
         flexWrap: 'wrap',
       }}>
-        <span>© {new Date().getFullYear()} The Brass Score Library</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span>© {new Date().getFullYear()} The Brass Score Library v1.0.0</span>        <span>v1.0.0</span>        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span aria-hidden="true" style={{
             display: 'inline-block',
             transformOrigin: 'center',

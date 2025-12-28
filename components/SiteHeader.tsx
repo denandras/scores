@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { styles, theme } from "@/components/ui/theme";
@@ -8,6 +9,7 @@ import { styles, theme } from "@/components/ui/theme";
 export default function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
   // No router or search params needed in simplified header
 
   useEffect(() => {
@@ -66,6 +68,18 @@ export default function SiteHeader() {
           ) : (
             <>
               {/* Upload visible; AuthGate on /upload protects access */}
+              {username && (
+                pathname === '/upload' ? (
+                  <>
+                    <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
+                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', backgroundColor: '#ffeb3b', color: '#000' }}>Search</Link>
+                  </>
+                ) : pathname === '/search' ? (
+                  <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
+                ) : (
+                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', backgroundColor: '#ffeb3b', color: '#000' }}>Search</Link>
+                )
+              )}
               <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Upload</Link>
               <a href="https://ko-fi.com/scorelibrary" target="_blank" rel="noopener noreferrer" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Support</a>
             </>
