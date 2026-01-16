@@ -93,7 +93,7 @@ function SearchContent() {
       {hasSearched && (
         <section style={{ marginTop: 16 }}>
           <div style={{ ...styles.tableWrap }}>
-            <div className="tbsl-header" style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(200px,1fr) minmax(200px,1fr) 120px' }}>
+            <div className="tbsl-header" style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(120px,1fr) minmax(120px,1fr) 80px' }}>
               <div className="tbsl-h-name">Name</div>
               <div className="tbsl-h-path">Path</div>
               <div className="tbsl-h-size" style={{ textAlign: 'right' }}>Size</div>
@@ -104,7 +104,7 @@ function SearchContent() {
                 key={`${r.path}-${idx}`}
                 style={{
                   ...styles.tableRow,
-                  gridTemplateColumns: 'minmax(200px,1fr) minmax(200px,1fr) 120px',
+                  gridTemplateColumns: 'minmax(120px,1fr) minmax(120px,1fr) 80px',
                   background: (idx % 2 === 0) ? theme.color.bg : theme.color.surface,
                 }}
               >

@@ -9,7 +9,7 @@
 }
 
 @layer components{
-  .btn{ @apply inline-flex items-center gap-2 min-h-10 px-4 rounded-md border border-[color:var(--border)] bg-white text-gray-900 no-underline cursor-pointer transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 active:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand; }
+  .btn{ @apply inline-flex items-center gap-2 min-h-10 px-4 rounded-md border border-[color:var(--border)] bg-white text-gray-900 no-underline cursor-pointer transition-transform duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500; }
   .btn-primary{ @apply border-transparent text-white bg-gradient-to-b from-blue-500 to-blue-600; }
   .btn-ghost{ @apply bg-white/70 backdrop-blur-sm; }
 
@@ -19,7 +19,7 @@
   /* Allow slightly longer filenames on mobile, truncate on larger screens */
   .tbsl-filename{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (max-width: 420px){
-    .tbsl-filename{ mask-image: linear-gradient(to right, black 92%, transparent); -webkit-mask-image: linear-gradient(to right, black 92%, transparent); font-size: 0.95em; }
+    .tbsl-filename{ mask-image: linear-gradient(to right, black 92%, transparent); -webkit-mask-image: linear-gradient(to right, black 92%, transparent); font-size: 0.95em; white-space: normal; }
   }
   @media (min-width: 421px){
     .tbsl-filename{ max-width: 48ch; display: inline-block; }

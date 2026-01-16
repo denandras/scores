@@ -72,12 +72,12 @@ export default function SiteHeader() {
                 pathname === '/upload' ? (
                   <>
                     <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
-                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', backgroundColor: '#ffeb3b', color: '#000' }}>Search</Link>
+                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffeb3b', color: '#000' }}>Search</Link>
                   </>
                 ) : pathname === '/search' ? (
                   <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
                 ) : (
-                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', backgroundColor: '#ffeb3b', color: '#000' }}>Search</Link>
+                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffeb3b', color: '#000' }}>Search</Link>
                 )
               )}
               <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Upload</Link>

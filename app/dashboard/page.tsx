@@ -110,7 +110,7 @@ function DashboardContent() {
 
         <section style={{ marginTop: 16 }}>
           <div style={{ ...styles.tableWrap, position: 'relative' }}>
-            <div className="tbsl-header" style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(200px,1fr) 120px 120px' }}>
+            <div className="tbsl-header" style={{ ...styles.tableHeader, gridTemplateColumns: 'minmax(120px,1fr) 80px 80px' }}>
               <div className="tbsl-h-name">Name</div>
               <div className="tbsl-h-size" style={{ textAlign: 'right' }}>Size</div>
               <div className="tbsl-h-action" style={{ textAlign: 'right' }}>Action</div>
@@ -120,7 +120,7 @@ function DashboardContent() {
               <div
                 style={{
                   ...styles.tableRow,
-                  gridTemplateColumns: 'minmax(200px,1fr) 120px 120px',
+                  gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
                   background: theme.color.surface,
                 }}
               >
@@ -144,7 +144,7 @@ function DashboardContent() {
                 key={f}
                 style={{
                   ...styles.tableRow,
-                  gridTemplateColumns: 'minmax(200px,1fr) 120px 120px',
+                  gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
                   background: ((syntheticCount + idx) % 2 === 0) ? theme.color.bg : theme.color.surface,
                 }}
               >
@@ -170,7 +170,7 @@ function DashboardContent() {
                 key={f.key}
                 style={{
                   ...styles.tableRow,
-                  gridTemplateColumns: 'minmax(200px,1fr) 120px 120px',
+                  gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
                   background: ((syntheticCount + folders.length + idx) % 2 === 0) ? theme.color.bg : theme.color.surface,
                 }}
               >
