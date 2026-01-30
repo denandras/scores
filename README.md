@@ -1,6 +1,15 @@
 # Scores
 
-A Next.js (TypeScript) app for browsing and sharing brass scores.
+A Next.js (TypeScript) app for browsing, searching, and sharing brass scores via S3-compatible storage.
+
+## Features
+
+- **Dashboard**: Browse S3 folders and files with automatic pagination (handles folders with 100+ items)
+- **Search**: Full-text search by filename or path with keyword matching
+- **Uploads**: PDF file uploads to S3 with progress tracking
+- **Auth**: Email-based magic link authentication via Supabase
+- **Terms**: Legal disclaimers and usage policies
+- **Responsive**: Mobile-friendly UI with graceful truncation
 
 ## Dev
 
@@ -14,6 +23,8 @@ S4_ACCESS_KEY_ID=...
 S4_SECRET_ACCESS_KEY=...
 S4_SESSION_TOKEN=...   # optional
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_URL=...       # Supabase project URL
+SUPABASE_ANON_KEY=...  # Supabase anon key
 ```
 
 2) Install and run:
@@ -25,18 +36,30 @@ npm run dev
 
 Open http://localhost:3000.
 
+## Pages
+
+### Home (/)
+Redirect to `/login` if not authenticated, otherwise redirect to `/dashboard`.
+
+### Login (/login)
+Email-based magic link authentication. User enters email, receives sign-in link, and is redirected via `/auth/callback` to the dashboard.
+
+### Dashboard (/dashboard)
+S3 browser with folder/file browsing and automatic pagination.
+
 ## Dashboard
 
-The Dashboard provides a minimal S3 browser and a global search.
+The Dashboard provides a minimal S3 browser with pagination support for large folders.
 
 - Breadcrumbs: shows current prefix; click segments to navigate up.
 - Folder list: underscore-first sort (any folder starting with `_` appears first), then A→Z.
 - File list: shows size and a Download action. Names truncate gracefully on mobile.
-- “Up” row: appears when not at root to go one level up.
+- "Up" row: appears when not at root to go one level up.
 - Loading overlay: prevents flicker while navigating or searching.
+- Pagination: automatically fetches and combines all results when a prefix contains >100 items (the API limit per request). Uses continuation tokens to retrieve subsequent pages transparently.
 - Responsive header: on small screens, the search input starts right after the Name label and spans the full width; on ≥640px, the header is a 4‑column grid (Name | Search | Size | Action).
 
-### Search behavior (2025 rules)
+### Search behavior
 
 - Scope: matches filename (basename) by default to avoid accidental folder-only hits. Path-wide matching is supported by the API (`scope=path`) but not exposed in UI yet.
 - Extensions: defaults to PDFs only. Other types can be included via `exts` query (comma‑separated), if exposed.
@@ -50,14 +73,24 @@ The Dashboard provides a minimal S3 browser and a global search.
 - View file: opens a presigned view URL in a new tab.
 - Download file: presigned download link.
 
-## Uploads
+## Uploads (/upload)
+PDF file upload interface with:
 
-The Upload page lets you select a PDF and upload it to the "upload" area in your bucket.
+- File type validation (PDF only)
+- Progress bar with upload percentage
+- Presigned PUT URL via `/api/s4/presign`
+- Fallback to server-side upload on CORS errors (`/api/s4/upload`)
+- Success/error inline feedback
 
-- Accepts only PDF files.
-- Uses a presigned PUT URL, with a server fallback for CORS-restricted environments.
-- Shows an in-button progress bar; success and error states are indicated inline.
-- Selected filename is shown and truncates gracefully on mobile.
+### Terms (/terms)
+Static page with usage policies and legal disclaimers.arch (/search)
+Global text search by filename or path with:
+
+- Minimum 2-character query requirement
+- Result count display (shows "100+" if capped)
+- File/folder icons and size display
+- Full path display for context
+- Empty state messaging
 
 ## API
 

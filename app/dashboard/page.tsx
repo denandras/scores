@@ -38,14 +38,29 @@ function DashboardContent() {
     setLoading(true);
     setError(null as any);
     try {
-      const qs = p ? `?prefix=${encodeURIComponent(p)}` : '';
-      const res = await fetch(`/api/s4/list${qs}`);
-      if (!res.ok) throw new Error(`List failed: ${res.status}`);
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'list_error');
-      const list: string[] = data.folders || [];
-  // underscore-first sort (e.g., folders starting with '_' appear first), then alphabetical
-      list.sort((a: string, b: string) => {
+      let allFolders: string[] = [];
+      let allFiles: Array<{key:string;name:string;size:number;lastModified:string|null}> = [];
+      let token: string | null = null;
+
+      // Fetch all pages
+      do {
+        const params = new URLSearchParams();
+        if (p) params.append('prefix', p);
+        if (token) params.append('token', token);
+        
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        const res = await fetch(`/api/s4/list${qs}`);
+        if (!res.ok) throw new Error(`List failed: ${res.status}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'list_error');
+        
+        allFolders.push(...(data.folders || []));
+        allFiles.push(...(data.files || []));
+        token = data.nextToken || null;
+      } while (token);
+
+      // Sort folders: underscore-first, then alphabetical
+      allFolders.sort((a: string, b: string) => {
         const an = a.toLowerCase();
         const bn = b.toLowerCase();
         const au = an.startsWith('_');
@@ -54,8 +69,9 @@ function DashboardContent() {
         if (!au && bu) return 1;
         return an.localeCompare(bn);
       });
-      setFolders(list);
-      setFiles(data.files || []);
+
+      setFolders(allFolders);
+      setFiles(allFiles);
     } catch (e:any) {
       setError(e?.message || 'error');
     } finally {

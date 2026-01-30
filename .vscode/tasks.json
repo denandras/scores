@@ -28,6 +28,17 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "dev: Start server",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev"
+			],
+			"isBackground": true,
+			"group": "build"
 		}
 	]
 }
