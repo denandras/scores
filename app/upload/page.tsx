@@ -5,101 +5,119 @@ import { useEffect, useRef, useState } from "react";
 import { styles, theme } from "@/components/ui/theme";
 
 export default function UploadPage() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [done, setDone] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const isAllowed = (f: File) => {
+    const name = f.name.toLowerCase();
+    const isPdf = f.type === "application/pdf" || name.endsWith(".pdf");
+    const isZip =
+      f.type === "application/zip" ||
+      f.type === "application/x-zip-compressed" ||
+      name.endsWith(".zip");
+    return isPdf || isZip;
+  };
+
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] ?? null;
+    const picked = Array.from(e.target.files ?? []);
     setStatus("");
     setProgress(0);
     setDone(false);
     setHasError(false);
-    if (f && f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) {
-      setFile(null);
-      setStatus('Only PDF files are allowed.');
-      setHasError(true);
+    if (picked.length === 0) {
+      setFiles([]);
       return;
     }
-    setFile(f);
+    const allowed = picked.filter(isAllowed);
+    if (allowed.length !== picked.length) {
+      setStatus('Only PDF or ZIP files are allowed.');
+      setHasError(true);
+    }
+    setFiles(allowed);
   };
 
   const upload = async () => {
     try {
-      if (!file) return;
-      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-        setStatus('Only PDF files are allowed.');
+      if (files.length === 0) return;
+      const invalid = files.find((f) => !isAllowed(f));
+      if (invalid) {
+        setStatus('Only PDF or ZIP files are allowed.');
+        setHasError(true);
         return;
       }
-  setStatus("Requesting upload URL…");
       setProgress(0);
       setDone(false);
-  setHasError(false);
-      const res = await fetch('/api/s4/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentType: file.type || 'application/octet-stream', filename: file.name }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(`Presign failed: ${res.status} ${err?.error ?? ''}`.trim());
-      }
-  const { url, key, filename } = await res.json();
-  const stampedName = key && key.includes('/') ? (key.split('/').pop() || filename) : filename;
+      setHasError(false);
 
-      setStatus("Uploading…");
-      // Use XMLHttpRequest to report progress
-      const putRes = await new Promise<Response>(async (resolve, reject) => {
-        try {
-          const xhr = new XMLHttpRequest();
-          xhr.open('PUT', url, true);
-          xhr.setRequestHeader('Content-Type', file.type || 'application/pdf');
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const pct = Math.round((e.loaded / e.total) * 100);
-              setProgress(pct);
-            }
-          };
-          xhr.onerror = () => reject(new Error('Network error during upload'));
-          xhr.onload = () => {
-            const ok = xhr.status >= 200 && xhr.status < 300;
-            // Create a Response-like object for uniform handling
-            resolve(new Response(null, { status: xhr.status, statusText: xhr.statusText }));
-          };
-          xhr.send(file);
-        } catch (err) {
-          reject(err);
-        }
-      });
-      if (!putRes.ok && putRes.status === 403) {
-        // Fallback: upload via server to bypass CORS
-  setStatus("Retrying via server…");
-        const srv = await fetch('/api/s4/upload', {
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i];
+        setStatus(`Requesting upload URL… (${i + 1}/${files.length})`);
+        setProgress(0);
+
+        const res = await fetch('/api/s4/presign', {
           method: 'POST',
-          headers: {
-            'Content-Type': file.type || 'application/octet-stream',
-            'x-file-name': file.name,
-          },
-          body: file,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentType: file.type || 'application/octet-stream', filename: file.name }),
         });
-        if (!srv.ok) {
-          const err = await srv.json().catch(() => ({}));
-          throw new Error(`Server upload failed: ${srv.status} ${err?.error ?? ''}`.trim());
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(`Presign failed: ${res.status} ${err?.error ?? ''}`.trim());
         }
-  const data = await srv.json();
-  const stampedSrv = data.key && data.key.includes('/') ? (data.key.split('/').pop() || data.filename) : data.filename;
-  setStatus(`Uploaded: ${stampedSrv}`);
+        const { url, key, filename } = await res.json();
+        const stampedName = key && key.includes('/') ? (key.split('/').pop() || filename) : filename;
+
+        setStatus(`Uploading… (${i + 1}/${files.length})`);
+        // Use XMLHttpRequest to report progress
+        const putRes = await new Promise<Response>(async (resolve, reject) => {
+          try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', url, true);
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                setProgress(pct);
+              }
+            };
+            xhr.onerror = () => reject(new Error('Network error during upload'));
+            xhr.onload = () => {
+              resolve(new Response(null, { status: xhr.status, statusText: xhr.statusText }));
+            };
+            xhr.send(file);
+          } catch (err) {
+            reject(err);
+          }
+        });
+        if (!putRes.ok && putRes.status === 403) {
+          // Fallback: upload via server to bypass CORS
+          setStatus(`Retrying via server… (${i + 1}/${files.length})`);
+          const srv = await fetch('/api/s4/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': file.type || 'application/octet-stream',
+              'x-file-name': file.name,
+            },
+            body: file,
+          });
+          if (!srv.ok) {
+            const err = await srv.json().catch(() => ({}));
+            throw new Error(`Server upload failed: ${srv.status} ${err?.error ?? ''}`.trim());
+          }
+          const data = await srv.json();
+          const stampedSrv = data.key && data.key.includes('/') ? (data.key.split('/').pop() || data.filename) : data.filename;
+          setStatus(`Uploaded: ${stampedSrv} (${i + 1}/${files.length})`);
+          setProgress(100);
+          continue;
+        }
+        if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
+        setStatus(`Uploaded: ${stampedName} (${i + 1}/${files.length})`);
         setProgress(100);
-        setDone(true);
-        setTimeout(() => setDone(false), 2000);
-        return;
       }
-      if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
-  setStatus(`Uploaded: ${stampedName}`);
-      setProgress(100);
+
       setDone(true);
       setTimeout(() => setDone(false), 2000);
     } catch (e: any) {
@@ -128,7 +146,8 @@ export default function UploadPage() {
               <input
                 ref={inputRef}
                 type="file"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,.pdf,application/zip,application/x-zip-compressed,.zip"
+                multiple
                 onChange={onPick}
                 style={{ display: 'none' }}
               />
@@ -141,21 +160,21 @@ export default function UploadPage() {
                     width: '100%',
                     justifyContent: 'center',
                     // When a PDF is selected, turn the button gray to indicate selection
-                    ...(file ? { background: theme.color.panel } : {}),
+                    ...(files.length > 0 ? { background: theme.color.panel } : {}),
                   }}
                 >
-                  {file ? (
-                    <span className="tbsl-filename" title={file.name} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                      {file.name}
+                  {files.length > 0 ? (
+                    <span className="tbsl-filename" title={files.map((f) => f.name).join(', ')} style={{ display: 'inline-block', maxWidth: '100%' }}>
+                      {files.length === 1 ? files[0].name : `${files.length} files selected`}
                     </span>
-                  ) : 'Choose PDF file'}
+                  ) : 'Choose PDF or ZIP files'}
                 </button>
               </div>
 
               <div style={{ width: '100%', maxWidth: 520 }}>
                 <button
                   onClick={upload}
-                  disabled={!file}
+                  disabled={files.length === 0}
                   style={{
                     ...styles.buttonBase,
                     // Match header button style (ghost)
@@ -164,7 +183,7 @@ export default function UploadPage() {
                     justifyContent: 'center',
                     position: 'relative' as const,
                     overflow: 'hidden',
-                    cursor: file ? 'pointer' : 'not-allowed',
+                    cursor: files.length > 0 ? 'pointer' : 'not-allowed',
                     ...(hasError ? { background: '#fee2e2', borderColor: '#fecaca', color: '#7f1d1d' } : {}),
                   }}
                 >
@@ -177,7 +196,7 @@ export default function UploadPage() {
                     transition: 'width 150ms ease-out',
                   }} />
                   <span style={{ position: 'relative' }}>
-                    {hasError ? 'Error uploading file' : (done ? 'Done ✓' : (progress > 0 ? `Uploading… ${progress}%` : 'Upload PDF'))}
+                    {hasError ? 'Error uploading files' : (done ? 'Done ✓' : (progress > 0 ? `Uploading… ${progress}%` : 'Upload files'))}
                   </span>
                 </button>
               </div>
