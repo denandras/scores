@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       if (inferred) safeName += inferred;
     }
 
-  // Upload target folder prefix: defaults to env (S4_PREFIX / S4_UPLOAD_PREFIX / UPLOAD_PREFIX) or '01 Uploads/'.
+  // Upload target folder prefix: defaults to env (S4_PREFIX / S4_UPLOAD_PREFIX / UPLOAD_PREFIX) or '01 Upload/'.
   // We add a date-time-second prefix to keep names unique while still sortable.
   const now = new Date();
   const yyyy = String(now.getUTCFullYear());
