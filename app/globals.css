@@ -26,11 +26,20 @@
   }
 
   /* Dashboard table header responsive layout */
-  .tbsl-header{ display: grid; grid-template-columns: 1fr; grid-template-areas: 'name' 'search' 'size' 'action'; align-items: center; gap: 8px; }
+  .tbsl-header{ display: grid; align-items: center; gap: 8px; }
   .tbsl-h-name{ grid-area: name; }
   .tbsl-h-search{ grid-area: search; }
   .tbsl-h-size{ grid-area: size; }
   .tbsl-h-action{ grid-area: action; }
+  @media (max-width: 639px){
+    .tbsl-header{
+      grid-template-areas: 'name size action';
+      gap: 6px;
+      padding: 8px 12px !important;
+      font-size: 11px !important;
+      line-height: 1.1;
+    }
+  }
   @media (min-width: 640px){
     /* Name column fits content, Search expands to fill between Name and Size */
     .tbsl-header{ grid-template-columns: auto 1fr 120px 120px; grid-template-areas: 'name search size action'; }
