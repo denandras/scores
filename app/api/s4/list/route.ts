@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { canAccessRestrictedPath, isRestrictedFolderEntry } from '@/lib/folderAccess';
+import { getRequesterEmail, requireRestrictedFolderAccess } from '@/lib/server/restrictedFolderGuard';
 
 export const runtime = 'nodejs';
 
@@ -25,6 +27,9 @@ export async function GET(req: Request) {
     const prefix = (url.searchParams.get('prefix') || '').replace(/^\/+/, '');
     const token = url.searchParams.get('token') || undefined;
 
+    const accessDenied = await requireRestrictedFolderAccess(prefix, req);
+    if (accessDenied) return accessDenied;
+
     const s3 = new S3Client({
       region,
       endpoint,
@@ -41,10 +46,16 @@ export async function GET(req: Request) {
     });
     const out = await s3.send(cmd);
 
-    const folders = (out.CommonPrefixes || [])
+    let folders = (out.CommonPrefixes || [])
       .map((p) => p.Prefix!)
       .filter(Boolean)
       .map((p) => p.slice(prefix.length));
+
+    const email = await getRequesterEmail(req);
+    folders = folders.filter((f) => {
+      if (!isRestrictedFolderEntry(prefix, f)) return true;
+      return canAccessRestrictedPath(`${prefix}${f}`, email);
+    });
 
     const files = (out.Contents || [])
       .filter((o) => o.Key && o.Key !== prefix)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { requireRestrictedFolderAccess } from '@/lib/server/restrictedFolderGuard';
 
 export const runtime = 'nodejs';
 
@@ -25,6 +26,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const key = (url.searchParams.get('key') || '').trim();
     if (!key) return NextResponse.json({ ok: false, error: 'key_required' }, { status: 400 });
+
+    const accessDenied = await requireRestrictedFolderAccess(key, req);
+    if (accessDenied) return accessDenied;
 
     const s3 = new S3Client({
       region,

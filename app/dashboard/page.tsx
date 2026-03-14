@@ -4,6 +4,8 @@ import AuthGate from "@/components/AuthGate";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
+import { supabase } from "@/lib/supabaseClient";
+import { canAccessRestrictedPath, isRestrictedFolderEntry } from "@/lib/folderAccess";
 
 function DashboardContent() {
   // Simple S3 browser: list folders/files and navigate prefixes.
@@ -12,6 +14,8 @@ function DashboardContent() {
   const [files, setFiles] = useState<Array<{key:string;name:string;size:number;lastModified:string|null}>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const crumbs = useMemo(() => {
     const parts = prefix.split('/').filter(Boolean);
@@ -49,7 +53,11 @@ function DashboardContent() {
         if (token) params.append('token', token);
         
         const qs = params.toString() ? `?${params.toString()}` : '';
-        const res = await fetch(`/api/s4/list${qs}`);
+        const headers: Record<string, string> = {};
+        if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+        const res = await fetch(`/api/s4/list${qs}`, {
+          headers,
+        });
         if (!res.ok) throw new Error(`List failed: ${res.status}`);
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'list_error');
@@ -82,7 +90,26 @@ function DashboardContent() {
   useEffect(() => {
     load(prefix);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefix]);
+  }, [prefix, accessToken]);
+
+  useEffect(() => {
+    let unsub = () => {};
+
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserEmail(session?.user?.email ?? null);
+      setAccessToken(session?.access_token ?? null);
+
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUserEmail(session?.user?.email ?? null);
+        setAccessToken(session?.access_token ?? null);
+      });
+      unsub = () => sub.subscription.unsubscribe();
+    };
+
+    init();
+    return () => unsub();
+  }, []);
 
   const go = (p: string) => {
     // Immediately reflect navigation intent
@@ -156,29 +183,50 @@ function DashboardContent() {
             )}
 
             {folders.map((f, idx) => (
-              <div
-                key={f}
-                style={{
-                  ...styles.tableRow,
-                  gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
-                  background: ((syntheticCount + idx) % 2 === 0) ? theme.color.bg : theme.color.surface,
-                }}
-              >
-                <a
-                  href="#"
-                  onClick={(e)=>{e.preventDefault(); go(prefix + f);}}
-                  style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
-                >
-                  <span style={{ fontSize: 20 }}>📁</span>
-                  <span className="tbsl-filename" style={{ fontWeight: 600 }}>
-                    {f.replace(/\/$/, '')}
-                  </span>
-                </a>
-                <div style={{ textAlign: 'right', color: theme.color.muted }}>—</div>
-                <div style={{ textAlign: 'right' }}>
-                  <a href="#" onClick={(e)=>{e.preventDefault(); go(prefix + f);}} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Open</a>
-                </div>
-              </div>
+              (() => {
+                const isRestricted = isRestrictedFolderEntry(prefix, f);
+                const allowed = canAccessRestrictedPath(`${prefix}${f}`, userEmail);
+                const locked = isRestricted && !allowed;
+
+                return (
+                  <div
+                    key={f}
+                    style={{
+                      ...styles.tableRow,
+                      gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
+                      background: ((syntheticCount + idx) % 2 === 0) ? theme.color.bg : theme.color.surface,
+                    }}
+                  >
+                    {locked ? (
+                      <div style={{ ...styles.tableIconAndName, color: theme.color.text, opacity: 0.8 }}>
+                        <span style={{ fontSize: 20 }}>🔒</span>
+                        <span className="tbsl-filename" style={{ fontWeight: 600 }}>
+                          {f.replace(/\/$/, '')}
+                        </span>
+                      </div>
+                    ) : (
+                      <a
+                        href="#"
+                        onClick={(e)=>{e.preventDefault(); go(prefix + f);}}
+                        style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
+                      >
+                        <span style={{ fontSize: 20 }}>📁</span>
+                        <span className="tbsl-filename" style={{ fontWeight: 600 }}>
+                          {f.replace(/\/$/, '')}
+                        </span>
+                      </a>
+                    )}
+                    <div style={{ textAlign: 'right', color: theme.color.muted }}>—</div>
+                    <div style={{ textAlign: 'right' }}>
+                      {locked ? (
+                        <span style={{ ...styles.buttonBase, opacity: 0.6, cursor: 'not-allowed' }} aria-label="Locked folder">Locked</span>
+                      ) : (
+                        <a href="#" onClick={(e)=>{e.preventDefault(); go(prefix + f);}} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Open</a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()
             ))}
 
             {files.map((f, idx) => (
