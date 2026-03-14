@@ -2,14 +2,14 @@
 
 export const theme = {
   color: {
-    bg: '#ffffff',
-    surface: '#f9fafb',
-    panel: '#f3f4f6',
-    text: '#111827',
-    muted: '#6b7280',
-    border: '#e5e7eb',
-    brand: '#111827',
-    accent: '#2563eb',
+    bg: '#fffaf4',
+    surface: '#fff3e4',
+    panel: '#ffe9d3',
+    text: '#2f2419',
+    muted: '#7a6753',
+    border: '#ead5bc',
+    brand: '#5f3518',
+    accent: '#b9602a',
   },
   radius: {
     sm: 6,
@@ -17,9 +17,9 @@ export const theme = {
     lg: 14,
   },
   shadow: {
-    sm: '0 1px 2px rgba(0,0,0,0.05)',
-    md: '0 4px 10px rgba(0,0,0,0.06)',
-    lg: '0 8px 24px rgba(0,0,0,0.08)'
+    sm: '0 2px 8px rgba(95,53,24,0.08)',
+    md: '0 8px 20px rgba(95,53,24,0.12)',
+    lg: '0 14px 34px rgba(95,53,24,0.15)'
   },
   space: (n: number) => `${n * 4}px`,
 } as const;
@@ -96,7 +96,7 @@ export const styles = {
     alignItems: 'center',
     gap: 8,
     padding: '12px 16px',
-    background: 'linear-gradient(180deg, #fbfbfd, #f4f6f8)',
+    background: 'linear-gradient(180deg, #fff9f1, #fff0df)',
     color: theme.color.muted,
     fontSize: 12,
     textTransform: 'uppercase' as const,

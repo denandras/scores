@@ -5,10 +5,13 @@ import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { styles, theme } from "@/components/ui/theme";
+import { motion, AnimatePresence } from "framer-motion";
+
 
 export default function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [introPlaying, setIntroPlaying] = useState(false);
   const pathname = usePathname();
   // No router or search params needed in simplified header
 
@@ -26,14 +29,79 @@ export default function SiteHeader() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const shown = sessionStorage.getItem('tbsl-support-intro');
+    if (!shown) {
+      setIntroPlaying(true);
+      const t = setTimeout(() => {
+        setIntroPlaying(false);
+        sessionStorage.setItem('tbsl-support-intro', '1');
+      }, 4500);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   // No explicit sign-in/out buttons in header per requirements
 
   // No search synchronization in header anymore
 
   const username = email ? (email.split('@')[0] || email) : null;
+  const accentBtn = { ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffd390', color: '#3c230f', fontWeight: 700 as const };
 
   return (
-    <header className="header-glass" style={{ zIndex: 10 }}>
+    <>
+      <AnimatePresence>
+        {introPlaying && (
+          <motion.div
+            key="support-intro"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            onClick={() => { setIntroPlaying(false); sessionStorage.setItem('tbsl-support-intro', '1'); }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,246,236,0.15)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
+          >
+            <motion.a
+              href="https://ko-fi.com/scorelibrary"
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.35, delay: 0.15 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                ...styles.buttonBase,
+                ...styles.buttonGhost,
+                padding: '16px 40px',
+                fontSize: 'clamp(15px, 4vw, 22px)',
+                fontWeight: 700,
+                borderRadius: 16,
+                boxShadow: '0 12px 40px rgba(47,36,25,0.18)',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                letterSpacing: 0.3,
+                maxWidth: 'min(520px, calc(100vw - 32px))',
+                whiteSpace: 'normal',
+                textAlign: 'center' as const,
+              }}
+            >
+              ☕ Support TBSL — it&#39;s free to use!
+            </motion.a>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <header className="header-glass" style={{ zIndex: 10 }}>
       <div style={{
         ...styles.container,
         display: 'grid',
@@ -72,20 +140,30 @@ export default function SiteHeader() {
                 pathname === '/upload' ? (
                   <>
                     <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
-                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffeb3b', color: '#000' }}>Search</Link>
+                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffd390', color: '#3c230f' }}>Search</Link>
                   </>
                 ) : pathname === '/search' ? (
-                  <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
+                  <Link href="/" style={accentBtn}>Library</Link>
                 ) : (
-                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffeb3b', color: '#000' }}>Search</Link>
+                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffd390', color: '#3c230f' }}>Search</Link>
                 )
               )}
               <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Upload</Link>
-              <a href="https://ko-fi.com/scorelibrary" target="_blank" rel="noopener noreferrer" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Support</a>
+              <motion.a
+                layoutId="support-ko-fi"
+                href="https://ko-fi.com/scorelibrary"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}
+                className="tbsl-support-btn"
+              >
+                ☕ <span className="tbsl-support-label">Support</span>
+              </motion.a>
             </>
           )}
         </div>
       </div>
-    </header>
+      </header>
+    </>
   );
 }

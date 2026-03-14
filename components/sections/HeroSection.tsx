@@ -14,8 +14,8 @@ export function HeroSection() {
         <p className="mt-2 text-base text-gray-700">Upload, browse, and download your brass scores with a modern, calm interface.</p>
       </motion.div>
       <div className="pointer-events-none absolute inset-0 -z-10 opacity-60" aria-hidden>
-        <div className="absolute -top-20 left-10 h-72 w-72 rounded-full bg-blue-400/20 blur-3xl" />
-        <div className="absolute -bottom-10 right-6 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl" />
+        <div className="absolute -top-20 left-10 h-72 w-72 rounded-full bg-orange-300/25 blur-3xl" />
+        <div className="absolute -bottom-10 right-6 h-72 w-72 rounded-full bg-rose-300/25 blur-3xl" />
       </div>
     </section>
   );

@@ -1,12 +1,12 @@
 export default function SiteFooter() {
   return (
-    <footer style={{ borderTop: '1px solid #e5e7eb', marginTop: 'auto', background: '#fafafa' }}>
+    <footer style={{ borderTop: '1px solid #ead5bc', marginTop: 'auto', background: 'linear-gradient(180deg, rgba(255,247,236,0.88), rgba(255,239,220,0.95))' }}>
       <div style={{
         maxWidth: 1200,
         margin: '0 auto',
         padding: '0.75rem 1rem',
         fontSize: 12,
-        color: '#6b7280',
+        color: '#7a6753',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

@@ -18,14 +18,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         minHeight: '100svh',
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+        fontFamily: '"Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif',
         lineHeight: 1.5,
-        color: '#111',
-        background: '#fff'
+        color: '#2f2419'
       }}>
         <SiteHeader />
         <div style={{ flex: 1 }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.15rem 1rem 1.5rem' }}>
             {children}
           </div>
         </div>
