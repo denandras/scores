@@ -47,7 +47,6 @@ export default function SiteHeader() {
   // No search synchronization in header anymore
 
   const username = email ? (email.split('@')[0] || email) : null;
-  const accentBtn = { ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffd390', color: '#3c230f', fontWeight: 700 as const };
 
   return (
     <>
@@ -59,7 +58,6 @@ export default function SiteHeader() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
-            onClick={() => { setIntroPlaying(false); sessionStorage.setItem('tbsl-support-intro', '1'); }}
             style={{
               position: 'fixed', inset: 0, zIndex: 9999,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -76,7 +74,6 @@ export default function SiteHeader() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.94 }}
               transition={{ duration: 0.35, delay: 0.15 }}
-              onClick={e => e.stopPropagation()}
               style={{
                 ...styles.buttonBase,
                 ...styles.buttonGhost,
@@ -140,12 +137,12 @@ export default function SiteHeader() {
                 pathname === '/upload' ? (
                   <>
                     <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
-                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffd390', color: '#3c230f' }}>Search</Link>
+                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Search</Link>
                   </>
                 ) : pathname === '/search' ? (
-                  <Link href="/" style={accentBtn}>Library</Link>
+                  <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
                 ) : (
-                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px', background: '#ffd390', color: '#3c230f' }}>Search</Link>
+                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Search</Link>
                 )
               )}
               <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Upload</Link>
