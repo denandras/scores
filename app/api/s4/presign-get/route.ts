@@ -25,6 +25,7 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const key = (body.key as string) || '';
+    const download = Boolean(body.download);
     if (!key) return NextResponse.json({ ok: false, error: 'key_required' }, { status: 400 });
 
     const accessDenied = await requireRestrictedFolderAccess(key, req);
@@ -36,7 +37,13 @@ export async function POST(req: Request) {
       forcePathStyle: true,
       credentials: { accessKeyId, secretAccessKey, sessionToken },
     });
-    const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const baseName = key.split('/').pop() || 'file';
+    const contentDisposition = download ? `attachment; filename="${baseName}"` : undefined;
+    const cmd = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ResponseContentDisposition: contentDisposition,
+    });
     const url = await getSignedUrl(s3, cmd, { expiresIn: 60 * 5 });
     return NextResponse.json({ ok: true, url });
   } catch (err: any) {

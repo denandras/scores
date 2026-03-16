@@ -120,16 +120,36 @@ function DashboardContent() {
     setError(null);
     setLoading(true);
   };
-  const isFolderKey = (key: string) => /\/$/.test(key);
-  const lastSegment = (key: string) => key.replace(/\/$/, '').split('/').pop() || key;
+  const getPresignedGetUrl = async (key: string, download: boolean) => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    const res = await fetch('/api/s4/presign-get', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ key, download }),
+    });
+    if (!res.ok) throw new Error(`Presign failed: ${res.status}`);
+    const data = await res.json();
+    if (!data.ok || !data.url) throw new Error(data.error || 'presign_error');
+    return data.url as string;
+  };
+
+  const openFile = async (key: string) => {
+    try {
+      const url = await getPresignedGetUrl(key, false);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e:any) {
+      alert(e?.message || 'open_error');
+    }
+  };
 
   const download = async (key: string) => {
     try {
-      const res = await fetch('/api/s4/presign-get', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
-      if (!res.ok) throw new Error(`Presign failed: ${res.status}`);
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'presign_error');
-      window.open(data.url, '_blank');
+      const url = await getPresignedGetUrl(key, true);
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (e:any) {
       alert(e?.message || 'download_error');
     }
@@ -239,8 +259,11 @@ function DashboardContent() {
                 }}
               >
                 <a
-                  href={`/api/s4/view?key=${encodeURIComponent(f.key)}`}
-                  target="_blank" rel="noopener noreferrer"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openFile(f.key);
+                  }}
                   style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
                 >
                   <span style={{ fontSize: 20 }}>{f.name.toLowerCase().endsWith('.zip') ? '📦' : '📄'}</span>
@@ -248,7 +271,16 @@ function DashboardContent() {
                 </a>
                 <div style={{ textAlign: 'right' }}>{formatBytes(f.size)}</div>
                 <div style={{ textAlign: 'right' }}>
-                  <a href={`/api/s4/download?key=${encodeURIComponent(f.key)}`} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Download</a>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      download(f.key);
+                    }}
+                    style={{ ...styles.buttonBase, ...styles.buttonGhost }}
+                  >
+                    Download
+                  </a>
                 </div>
               </div>
             ))}
