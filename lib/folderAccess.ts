@@ -5,7 +5,7 @@ type RestrictedRule = {
 
 const RESTRICTED_RULES: RestrictedRule[] = [
   {
-    restrictedPrefix: '03 Mixed Chamber/07 Septet/',
+    restrictedPrefix: 'scores/03 Mixed Chamber/07 Septet/',
     allowedEmails: new Set([
       'denandras@gmail.com',
       'nagykristof1932@gmail.com',
@@ -19,7 +19,7 @@ const RESTRICTED_RULES: RestrictedRule[] = [
     ]),
   },
   {
-    restrictedPrefix: '07 Trombone/_Trombone Ensemble/8/_SETREN/',
+    restrictedPrefix: 'scores/07 Trombone/_Trombone Ensemble/8/_SETREN/',
     allowedEmails: new Set([
       'denandras@gmail.com',
     ]),

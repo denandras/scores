@@ -7,9 +7,12 @@ import { formatBytes } from "@/lib/format";
 import { supabase } from "@/lib/supabaseClient";
 import { canAccessRestrictedPath, isRestrictedFolderEntry } from "@/lib/folderAccess";
 
+const _rootEnv = (process.env.NEXT_PUBLIC_S4_ROOT ?? '');
+const ROOT = _rootEnv ? (_rootEnv.endsWith('/') ? _rootEnv : _rootEnv + '/') : '';
+
 function DashboardContent() {
   // Simple S3 browser: list folders/files and navigate prefixes.
-  const [prefix, setPrefix] = useState<string>("");
+  const [prefix, setPrefix] = useState<string>(ROOT);
   const [folders, setFolders] = useState<string[]>([]);
   const [files, setFiles] = useState<Array<{key:string;name:string;size:number;lastModified:string|null}>>([]);
   const [loading, setLoading] = useState(false);
@@ -18,25 +21,28 @@ function DashboardContent() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const crumbs = useMemo(() => {
-    const parts = prefix.split('/').filter(Boolean);
-    const acc: Array<{name:string; pfx:string}> = [{ name: 'home', pfx: '' }];
-    let cur = '';
+    const relative = prefix.startsWith(ROOT) ? prefix.slice(ROOT.length) : prefix;
+    const parts = relative.split('/').filter(Boolean);
+    const acc: Array<{name:string; pfx:string}> = [{ name: 'home', pfx: ROOT }];
+    let cur = ROOT;
     for (const p of parts) {
-      cur = cur ? `${cur}/${p}` : p;
-      acc.push({ name: p, pfx: cur + '/' });
+      cur = `${cur}${p}/`;
+      acc.push({ name: p, pfx: cur });
     }
     return acc;
   }, [prefix]);
 
   const parentPrefix = useMemo(() => {
     const trimmed = prefix.replace(/\/$/, '');
-    if (!trimmed) return '';
+    const rootTrimmed = ROOT.replace(/\/$/, '');
+    if (!trimmed || trimmed === rootTrimmed) return ROOT;
     const i = trimmed.lastIndexOf('/');
-    if (i === -1) return '';
-    return trimmed.slice(0, i + 1);
+    if (i === -1) return ROOT;
+    const parent = trimmed.slice(0, i + 1);
+    return (ROOT && !parent.startsWith(ROOT)) ? ROOT : parent;
   }, [prefix]);
 
-  const syntheticCount = (prefix ? 1 : 0); // Only Up row when not at root
+  const syntheticCount = (prefix !== ROOT ? 1 : 0); // Only Up row when not at root
 
   const load = async (p: string) => {
     setLoading(true);
@@ -179,7 +185,7 @@ function DashboardContent() {
               <div className="tbsl-h-action" style={{ textAlign: 'right' }}>Action</div>
             </div>
             {/* Up row (only if not at root) */}
-            {prefix && (
+            {prefix !== ROOT && (
               <div
                 style={{
                   ...styles.tableRow,
