@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { canAccessRestrictedPath, isRestrictedS4Path, normalizeS4Path } from '@/lib/folderAccess';
+import { canAccessRestrictedPathAsync, isRestrictedS4PathAsync, normalizeS4Path } from '@/lib/folderAccess';
 import { getServerSupabase } from '@/lib/server/supabaseServer';
 
 async function getEmailFromBearerToken(req?: Request): Promise<string | null> {
@@ -40,10 +40,10 @@ export async function getRequesterEmail(req?: Request): Promise<string | null> {
 
 export async function requireRestrictedFolderAccess(path: string, req?: Request): Promise<NextResponse | null> {
   const normalizedPath = normalizeS4Path(path);
-  if (!isRestrictedS4Path(normalizedPath)) return null;
+  if (!(await isRestrictedS4PathAsync(normalizedPath))) return null;
 
   const email = await getRequesterEmail(req);
-  if (canAccessRestrictedPath(normalizedPath, email)) return null;
+  if (await canAccessRestrictedPathAsync(normalizedPath, email)) return null;
 
   return NextResponse.json(
     { ok: false, error: 'forbidden_restricted_folder' },

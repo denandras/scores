@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { canAccessRestrictedPath, isRestrictedFolderEntry } from '@/lib/folderAccess';
+import { canAccessRestrictedPathAsync, isRestrictedFolderEntryAsync } from '@/lib/folderAccess';
 import { getRequesterEmail, requireRestrictedFolderAccess } from '@/lib/server/restrictedFolderGuard';
 
 export const runtime = 'nodejs';
@@ -52,10 +52,18 @@ export async function GET(req: Request) {
       .map((p) => p.slice(prefix.length));
 
     const email = await getRequesterEmail(req);
-    folders = folders.filter((f) => {
-      if (!isRestrictedFolderEntry(prefix, f)) return true;
-      return canAccessRestrictedPath(`${prefix}${f}`, email);
-    });
+    const visibleFolders: string[] = [];
+    for (const f of folders) {
+      const isRestricted = await isRestrictedFolderEntryAsync(prefix, f);
+      if (!isRestricted) {
+        visibleFolders.push(f);
+        continue;
+      }
+      if (await canAccessRestrictedPathAsync(`${prefix}${f}`, email)) {
+        visibleFolders.push(f);
+      }
+    }
+    folders = visibleFolders;
 
     const files = (out.Contents || [])
       .filter((o) => o.Key && o.Key !== prefix)

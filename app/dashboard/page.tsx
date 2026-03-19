@@ -5,7 +5,6 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
 import { supabase } from "@/lib/supabaseClient";
-import { canAccessRestrictedPath, isRestrictedFolderEntry } from "@/lib/folderAccess";
 
 const _rootEnv = (process.env.NEXT_PUBLIC_S4_ROOT ?? '');
 const ROOT = _rootEnv ? (_rootEnv.endsWith('/') ? _rootEnv : _rootEnv + '/') : '';
@@ -17,7 +16,6 @@ function DashboardContent() {
   const [files, setFiles] = useState<Array<{key:string;name:string;size:number;lastModified:string|null}>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const crumbs = useMemo(() => {
@@ -103,11 +101,9 @@ function DashboardContent() {
 
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUserEmail(session?.user?.email ?? null);
       setAccessToken(session?.access_token ?? null);
 
       const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-        setUserEmail(session?.user?.email ?? null);
         setAccessToken(session?.access_token ?? null);
       });
       unsub = () => sub.subscription.unsubscribe();
@@ -209,50 +205,29 @@ function DashboardContent() {
             )}
 
             {folders.map((f, idx) => (
-              (() => {
-                const isRestricted = isRestrictedFolderEntry(prefix, f);
-                const allowed = canAccessRestrictedPath(`${prefix}${f}`, userEmail);
-                const locked = isRestricted && !allowed;
-
-                return (
-                  <div
-                    key={f}
-                    style={{
-                      ...styles.tableRow,
-                      gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
-                      background: ((syntheticCount + idx) % 2 === 0) ? theme.color.bg : theme.color.surface,
-                    }}
-                  >
-                    {locked ? (
-                      <div style={{ ...styles.tableIconAndName, color: theme.color.text, opacity: 0.8 }}>
-                        <span style={{ fontSize: 20 }}>🔒</span>
-                        <span className="tbsl-filename" style={{ fontWeight: 600 }}>
-                          {f.replace(/\/$/, '')}
-                        </span>
-                      </div>
-                    ) : (
-                      <a
-                        href="#"
-                        onClick={(e)=>{e.preventDefault(); go(prefix + f);}}
-                        style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
-                      >
-                        <span style={{ fontSize: 20 }}>📁</span>
-                        <span className="tbsl-filename" style={{ fontWeight: 600 }}>
-                          {f.replace(/\/$/, '')}
-                        </span>
-                      </a>
-                    )}
-                    <div style={{ textAlign: 'right', color: theme.color.muted }}>—</div>
-                    <div style={{ textAlign: 'right' }}>
-                      {locked ? (
-                        <span style={{ ...styles.buttonBase, opacity: 0.6, cursor: 'not-allowed' }} aria-label="Locked folder">Locked</span>
-                      ) : (
-                        <a href="#" onClick={(e)=>{e.preventDefault(); go(prefix + f);}} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Open</a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()
+              <div
+                key={f}
+                style={{
+                  ...styles.tableRow,
+                  gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
+                  background: ((syntheticCount + idx) % 2 === 0) ? theme.color.bg : theme.color.surface,
+                }}
+              >
+                <a
+                  href="#"
+                  onClick={(e)=>{e.preventDefault(); go(prefix + f);}}
+                  style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
+                >
+                  <span style={{ fontSize: 20 }}>📁</span>
+                  <span className="tbsl-filename" style={{ fontWeight: 600 }}>
+                    {f.replace(/\/$/, '')}
+                  </span>
+                </a>
+                <div style={{ textAlign: 'right', color: theme.color.muted }}>—</div>
+                <div style={{ textAlign: 'right' }}>
+                  <a href="#" onClick={(e)=>{e.preventDefault(); go(prefix + f);}} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Open</a>
+                </div>
+              </div>
             ))}
 
             {files.map((f, idx) => (
