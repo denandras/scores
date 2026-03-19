@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { resolveUploadPrefix } from '@/lib/uploadPrefix';
+import { buildUploadObjectKey } from '@/lib/uploadObjectKey';
 
 export const runtime = 'nodejs';
 
@@ -45,15 +46,7 @@ export async function POST(req: Request) {
     const originalName = req.headers.get('x-file-name') || 'file';
     const safeName = sanitizeFilename(originalName);
 
-    const now = new Date();
-    const yyyy = String(now.getUTCFullYear());
-    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(now.getUTCDate()).padStart(2, '0');
-    const hh = String(now.getUTCHours()).padStart(2, '0');
-    const min = String(now.getUTCMinutes()).padStart(2, '0');
-    const ss = String(now.getUTCSeconds()).padStart(2, '0');
-    const timePrefix = `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}-`;
-    const key = `${fixedPrefix}${timePrefix}${safeName}`;
+    const key = buildUploadObjectKey(fixedPrefix, safeName);
 
     const s3 = new S3Client({
       region,

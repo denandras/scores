@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'node:crypto';
 import { resolveUploadPrefix } from '@/lib/uploadPrefix';
+import { buildUploadObjectKey } from '@/lib/uploadObjectKey';
 
 export const runtime = 'nodejs';
 
@@ -74,18 +74,7 @@ export async function POST(req: Request) {
       if (inferred) safeName += inferred;
     }
 
-  // Upload target folder prefix: defaults to env (S4_PREFIX / S4_UPLOAD_PREFIX / UPLOAD_PREFIX) or '01 Upload/'.
-  // We add a date-time-second prefix to keep names unique while still sortable.
-  const now = new Date();
-  const yyyy = String(now.getUTCFullYear());
-  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(now.getUTCDate()).padStart(2, '0');
-  const hh = String(now.getUTCHours()).padStart(2, '0');
-  const min = String(now.getUTCMinutes()).padStart(2, '0');
-  const ss = String(now.getUTCSeconds()).padStart(2, '0');
-  const timePrefix = `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}-`;
-
-  const key = `${fixedPrefix}${timePrefix}${safeName}`;
+    const key = buildUploadObjectKey(fixedPrefix, safeName);
 
     const s3 = new S3Client({
       region: region === 'auto' ? 'us-east-1' : region,

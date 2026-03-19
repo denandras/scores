@@ -52,74 +52,86 @@ export default function UploadPage() {
       setProgress(0);
       setDone(false);
       setHasError(false);
+      const totalFiles = files.length;
+      let successCount = 0;
+      let failCount = 0;
 
-      for (let i = 0; i < files.length; i += 1) {
+      for (let i = 0; i < totalFiles; i += 1) {
         const file = files[i];
-        setStatus(`Requesting upload URL… (${i + 1}/${files.length})`);
-        setProgress(0);
+        setStatus(`Requesting upload URL... (${i + 1}/${totalFiles})`);
 
-        const res = await fetch('/api/s4/presign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contentType: file.type || 'application/octet-stream', filename: file.name }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(`Presign failed: ${res.status} ${err?.error ?? ''}`.trim());
-        }
-        const { url, key, filename } = await res.json();
-        const stampedName = key && key.includes('/') ? (key.split('/').pop() || filename) : filename;
-
-        setStatus(`Uploading… (${i + 1}/${files.length})`);
-        // Use XMLHttpRequest to report progress
-        const putRes = await new Promise<Response>(async (resolve, reject) => {
-          try {
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', url, true);
-            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-            xhr.upload.onprogress = (e) => {
-              if (e.lengthComputable) {
-                const pct = Math.round((e.loaded / e.total) * 100);
-                setProgress(pct);
-              }
-            };
-            xhr.onerror = () => reject(new Error('Network error during upload'));
-            xhr.onload = () => {
-              resolve(new Response(null, { status: xhr.status, statusText: xhr.statusText }));
-            };
-            xhr.send(file);
-          } catch (err) {
-            reject(err);
-          }
-        });
-        if (!putRes.ok && putRes.status === 403) {
-          // Fallback: upload via server to bypass CORS
-          setStatus(`Retrying via server… (${i + 1}/${files.length})`);
-          const srv = await fetch('/api/s4/upload', {
+        try {
+          const res = await fetch('/api/s4/presign', {
             method: 'POST',
-            headers: {
-              'Content-Type': file.type || 'application/octet-stream',
-              'x-file-name': file.name,
-            },
-            body: file,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contentType: file.type || 'application/octet-stream', filename: file.name }),
           });
-          if (!srv.ok) {
-            const err = await srv.json().catch(() => ({}));
-            throw new Error(`Server upload failed: ${srv.status} ${err?.error ?? ''}`.trim());
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(`Presign failed: ${res.status} ${err?.error ?? ''}`.trim());
           }
-          const data = await srv.json();
-          const stampedSrv = data.key && data.key.includes('/') ? (data.key.split('/').pop() || data.filename) : data.filename;
-          setStatus(`Uploaded: ${stampedSrv} (${i + 1}/${files.length})`);
-          setProgress(100);
-          continue;
+          const { url, key, filename } = await res.json();
+          const stampedName = key && key.includes('/') ? (key.split('/').pop() || filename) : filename;
+
+          setStatus(`Uploading... (${i + 1}/${totalFiles})`);
+          const putRes = await new Promise<Response>(async (resolve, reject) => {
+            try {
+              const xhr = new XMLHttpRequest();
+              xhr.open('PUT', url, true);
+              xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+              xhr.onerror = () => reject(new Error('Network error during upload'));
+              xhr.onload = () => {
+                resolve(new Response(null, { status: xhr.status, statusText: xhr.statusText }));
+              };
+              xhr.send(file);
+            } catch (err) {
+              reject(err);
+            }
+          });
+
+          if (!putRes.ok && putRes.status === 403) {
+            setStatus(`Retrying via server... (${i + 1}/${totalFiles})`);
+            const srv = await fetch('/api/s4/upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+                'x-file-name': file.name,
+              },
+              body: file,
+            });
+            if (!srv.ok) {
+              const err = await srv.json().catch(() => ({}));
+              throw new Error(`Server upload failed: ${srv.status} ${err?.error ?? ''}`.trim());
+            }
+            const data = await srv.json();
+            const stampedSrv = data.key && data.key.includes('/') ? (data.key.split('/').pop() || data.filename) : data.filename;
+            successCount += 1;
+            const successPct = Math.round((successCount / totalFiles) * 100);
+            setProgress(successPct);
+            setStatus(`Uploaded: ${stampedSrv} (${successCount}/${totalFiles})`);
+            continue;
+          }
+
+          if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
+          successCount += 1;
+          const successPct = Math.round((successCount / totalFiles) * 100);
+          setProgress(successPct);
+          setStatus(`Uploaded: ${stampedName} (${successCount}/${totalFiles})`);
+        } catch (fileErr: any) {
+          failCount += 1;
+          setHasError(true);
+          const fileMsg = typeof fileErr?.message === 'string' ? fileErr.message : 'unknown error';
+          setStatus(`Failed: ${file.name} (${fileMsg})`);
         }
-        if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
-        setStatus(`Uploaded: ${stampedName} (${i + 1}/${files.length})`);
-        setProgress(100);
       }
 
-      setDone(true);
-      setTimeout(() => setDone(false), 2000);
+      if (failCount > 0) {
+        setStatus(`Completed with errors: ${successCount}/${totalFiles} uploaded, ${failCount} failed.`);
+      } else {
+        setDone(true);
+        setStatus(`Upload complete: ${successCount}/${totalFiles} uploaded.`);
+        setTimeout(() => setDone(false), 2000);
+      }
     } catch (e: any) {
       setStatus(`Error: ${e?.message ?? 'unknown'}`);
       setHasError(true);
@@ -196,7 +208,7 @@ export default function UploadPage() {
                     transition: 'width 150ms ease-out',
                   }} />
                   <span style={{ position: 'relative' }}>
-                    {hasError ? 'Error uploading files' : (done ? 'Done ✓' : (progress > 0 ? `Uploading… ${progress}%` : 'Upload files'))}
+                    {hasError ? (progress > 0 ? `Uploaded ${progress}% (with errors)` : 'Error uploading files') : (done ? 'Done ✓' : (progress > 0 ? `Uploaded ${progress}%` : 'Upload files'))}
                   </span>
                 </button>
               </div>
