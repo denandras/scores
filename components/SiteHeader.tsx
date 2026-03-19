@@ -31,6 +31,15 @@ export default function SiteHeader() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (loading) return;
+
+    // Hard-coded bypass requested by user for this account.
+    if ((email || '').toLowerCase() === 'denandras@gmail.com') {
+      setIntroPlaying(false);
+      sessionStorage.setItem('tbsl-support-intro', '1');
+      return;
+    }
+
     const shown = sessionStorage.getItem('tbsl-support-intro');
     if (!shown) {
       setIntroPlaying(true);
@@ -40,7 +49,7 @@ export default function SiteHeader() {
       }, 4500);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [loading, email]);
 
   // No explicit sign-in/out buttons in header per requirements
 
