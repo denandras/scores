@@ -83,6 +83,7 @@ export async function GET(req: Request) {
     });
   } catch (err: any) {
     const msg = typeof err?.message === 'string' ? err.message : 'server_error';
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    const errorType = typeof err?.name === 'string' ? err.name : 'Error';
+    return NextResponse.json({ ok: false, error: msg, errorType }, { status: 500 });
   }
 }

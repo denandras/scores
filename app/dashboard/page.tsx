@@ -62,7 +62,16 @@ function DashboardContent() {
         const res = await fetch(`/api/s4/list${qs}`, {
           headers,
         });
-        if (!res.ok) throw new Error(`List failed: ${res.status}`);
+        if (!res.ok) {
+          let serverMessage = '';
+          try {
+            const body = await res.json();
+            serverMessage = typeof body?.error === 'string' ? body.error : '';
+          } catch {
+            serverMessage = '';
+          }
+          throw new Error(serverMessage ? `List failed (${res.status}): ${serverMessage}` : `List failed: ${res.status}`);
+        }
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'list_error');
         

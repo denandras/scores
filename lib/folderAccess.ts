@@ -43,7 +43,9 @@ async function fetchRestrictedRulesFromSupabase(): Promise<RestrictedRule[]> {
   const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
   const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase env for restricted folder access.');
+    // If restricted access backend is not configured, treat as no restricted rules
+    // instead of failing unrelated S3 listing operations.
+    return [];
   }
 
   try {
@@ -76,9 +78,16 @@ async function getEffectiveRestrictedRules(): Promise<RestrictedRule[]> {
     cachedRules = rules;
     cacheUntil = now + 60_000;
     return rules;
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      const message = error instanceof Error ? error.message : 'unknown_error';
+      console.warn(`[folderAccess] Using cached/empty rules due to load failure: ${message}`);
+    }
     if (cachedRules) return cachedRules;
-    throw new Error('Restricted folder access rules are unavailable.');
+    // Fail open with no rules so listing/search endpoints stay available.
+    cachedRules = [];
+    cacheUntil = now + 60_000;
+    return cachedRules;
   }
 }
 
