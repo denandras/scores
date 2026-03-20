@@ -50,7 +50,7 @@ body {
     .tbsl-filename{ mask-image: linear-gradient(to right, black 92%, transparent); -webkit-mask-image: linear-gradient(to right, black 92%, transparent); font-size: 0.95em; white-space: normal; }
   }
   @media (min-width: 421px){
-    .tbsl-filename{ max-width: 48ch; display: inline-block; }
+    .tbsl-filename{ max-width: 100%; display: inline-block; min-width: 0; }
   }
 
   /* Dashboard table header responsive layout */

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { styles, theme } from "@/components/ui/theme";
@@ -12,7 +11,6 @@ export default function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [introPlaying, setIntroPlaying] = useState(false);
-  const pathname = usePathname();
   // No router or search params needed in simplified header
 
   useEffect(() => {
@@ -141,19 +139,8 @@ export default function SiteHeader() {
             <span style={{ color: theme.color.muted }}>…</span>
           ) : (
             <>
-              {/* Upload visible; AuthGate on /upload protects access */}
-              {username && (
-                pathname === '/upload' ? (
-                  <>
-                    <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
-                    <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Search</Link>
-                  </>
-                ) : pathname === '/search' ? (
-                  <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
-                ) : (
-                  <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Search</Link>
-                )
-              )}
+              <Link href="/" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Library</Link>
+              <Link href="/search" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Search</Link>
               <Link href="/upload" style={{ ...styles.buttonBase, ...styles.buttonGhost, padding: '6px 10px' }}>Upload</Link>
               <motion.a
                 layoutId="support-ko-fi"

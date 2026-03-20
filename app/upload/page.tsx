@@ -9,6 +9,7 @@ export default function UploadPage() {
   const [status, setStatus] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [done, setDone] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -51,6 +52,7 @@ export default function UploadPage() {
       }
       setProgress(0);
       setDone(false);
+      setIsUploading(true);
       setHasError(false);
       const totalFiles = files.length;
       let successCount = 0;
@@ -128,15 +130,17 @@ export default function UploadPage() {
       if (failCount > 0) {
         setStatus(`Completed with errors: ${successCount}/${totalFiles} uploaded, ${failCount} failed.`);
       } else {
-        setDone(true);
+        setProgress(100);
+        setDone(successCount === totalFiles);
         setStatus(`Upload complete: ${successCount}/${totalFiles} uploaded.`);
-        setTimeout(() => setDone(false), 2000);
       }
     } catch (e: any) {
       setStatus(`Error: ${e?.message ?? 'unknown'}`);
       setHasError(true);
       setProgress(0);
       setDone(false);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -208,7 +212,13 @@ export default function UploadPage() {
                     transition: 'width 150ms ease-out',
                   }} />
                   <span style={{ position: 'relative' }}>
-                    {hasError ? (progress > 0 ? `Uploaded ${progress}% (with errors)` : 'Error uploading files') : (done ? 'Done ✓' : (progress > 0 ? `Uploaded ${progress}%` : 'Upload files'))}
+                    {hasError
+                      ? (progress > 0 ? `Uploaded ${progress}% (with errors)` : 'Error uploading files')
+                      : ((done && progress === 100 && !isUploading)
+                        ? 'Done ✓'
+                        : (isUploading
+                          ? (progress >= 100 ? 'Finalizing...' : `Uploading ${progress}%`)
+                          : (progress > 0 ? `Uploaded ${progress}%` : 'Upload files')))}
                   </span>
                 </button>
               </div>
