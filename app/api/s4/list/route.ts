@@ -16,6 +16,17 @@ function required(name: string, value: any) {
   if (!value) throw new Error(`Missing env: ${name}`);
 }
 
+function noStoreJson(body: any, init?: { status?: number }) {
+  return NextResponse.json(body, {
+    ...(init || {}),
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  });
+}
+
 export async function GET(req: Request) {
   try {
     required('S4_ENDPOINT', endpoint);
@@ -74,7 +85,7 @@ export async function GET(req: Request) {
         lastModified: o.LastModified ? new Date(o.LastModified).toISOString() : null,
       }));
 
-    return NextResponse.json({
+    return noStoreJson({
       ok: true,
       prefix,
       folders,
@@ -84,6 +95,6 @@ export async function GET(req: Request) {
   } catch (err: any) {
     const msg = typeof err?.message === 'string' ? err.message : 'server_error';
     const errorType = typeof err?.name === 'string' ? err.name : 'Error';
-    return NextResponse.json({ ok: false, error: msg, errorType }, { status: 500 });
+    return noStoreJson({ ok: false, error: msg, errorType }, { status: 500 });
   }
 }

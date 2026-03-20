@@ -61,6 +61,7 @@ function DashboardContent() {
         if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
         const res = await fetch(`/api/s4/list${qs}`, {
           headers,
+          cache: 'no-store',
         });
         if (!res.ok) {
           let serverMessage = '';
