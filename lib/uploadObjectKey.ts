@@ -12,10 +12,10 @@ export function buildUploadObjectKey(prefix: string, safeFilename: string): stri
   const hh = two(now.getUTCHours());
   const min = two(now.getUTCMinutes());
   const ss = two(now.getUTCSeconds());
-  const unique = randomUUID().slice(0, 8);
+  const unique = randomUUID().slice(0, 6);
 
-  // Date partitioning keeps uploads organized and UUID avoids name collisions.
-  const datePrefix = `${yyyy}/${mm}/${dd}/`;
+  // MinIO/S3 browser friendly: keep uploads directly under configured prefix.
+  // Example: scores/01 Upload/2026-03-20_09-30-15-abc123-file.pdf
   const stamp = `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
-  return `${prefix}${datePrefix}${stamp}-${unique}-${safeFilename}`;
+  return `${prefix}${stamp}-${unique}-${safeFilename}`;
 }
