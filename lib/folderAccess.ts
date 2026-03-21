@@ -101,13 +101,18 @@ function normalizeComparablePath(path: string): string {
 
 function matchRuleForPath(path: string, rules: RestrictedRule[]): RestrictedRule | null {
   const normalized = normalizeComparablePath(path);
+  let bestMatch: RestrictedRule | null = null;
+  let bestMatchLength = -1;
   for (const rule of rules) {
     const restricted = normalizeComparablePath(rule.restrictedPrefix);
     if (normalized === restricted || normalized.startsWith(`${restricted}/`)) {
-      return rule;
+      if (restricted.length > bestMatchLength) {
+        bestMatch = rule;
+        bestMatchLength = restricted.length;
+      }
     }
   }
-  return null;
+  return bestMatch;
 }
 
 export async function canAccessRestrictedPathAsync(path: string, email: string | null | undefined): Promise<boolean> {
