@@ -11,6 +11,66 @@ type SearchResult = {
   size_bytes: number;
 };
 
+const _s4Root = (process.env.NEXT_PUBLIC_S4_ROOT || '').trim();
+const S4_ROOT_PREFIX = _s4Root ? (_s4Root.endsWith('/') ? _s4Root : _s4Root + '/') : '';
+
+function normalizePath(value: string): string {
+  return (value || '').trim().replace(/^\/+/, '');
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`;
+}
+
+function isFolderResult(row: SearchResult): boolean {
+  const path = normalizePath(row.path);
+  return row.size_bytes <= 0 || path.endsWith('/');
+}
+
+function getFolderPrefix(row: SearchResult): string {
+  const path = normalizePath(row.path);
+  if (!path) return '';
+  return ensureTrailingSlash(path);
+}
+
+function getFileKey(row: SearchResult): string {
+  const path = normalizePath(row.path);
+  const filename = (row.filename || '').trim();
+
+  let key: string;
+  if (!path) key = filename;
+  else if (!filename) key = path;
+  else {
+    const pathLower = path.toLowerCase();
+    const filenameLower = filename.toLowerCase();
+    if (pathLower === filenameLower || pathLower.endsWith(`/${filenameLower}`)) {
+      key = path;
+    } else if (path.endsWith('/')) {
+      key = `${path}${filename}`;
+    } else {
+      key = `${path}/${filename}`;
+    }
+  }
+
+  // Prepend the S3 root prefix (e.g. "tb1/") if not already present.
+  // scores_files.path stores paths without the root prefix, but the actual
+  // S3 object keys include it.
+  if (S4_ROOT_PREFIX && !key.startsWith(S4_ROOT_PREFIX)) {
+    key = `${S4_ROOT_PREFIX}${key}`;
+  }
+
+  return key;
+}
+
+function getResultHref(row: SearchResult): string {
+  if (isFolderResult(row)) {
+    const prefix = getFolderPrefix(row);
+    return `/dashboard?prefix=${encodeURIComponent(prefix)}`;
+  }
+  const key = getFileKey(row);
+  return `/api/s4/view?key=${encodeURIComponent(key)}`;
+}
+
 function SearchContent() {
   const [keyword, setKeyword] = useState<string>("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -99,23 +159,41 @@ function SearchContent() {
               <div className="tbsl-h-size" style={{ textAlign: 'right' }}>Size</div>
             </div>
 
-            {results.map((r, idx) => (
-              <div
-                key={`${r.path}-${idx}`}
-                style={{
-                  ...styles.tableRow,
-                  gridTemplateColumns: 'minmax(120px,1fr) minmax(120px,1fr) 80px',
-                  background: (idx % 2 === 0) ? theme.color.bg : theme.color.surface,
-                }}
-              >
-                <div style={{ ...styles.tableIconAndName }}>
-                <span style={{ fontSize: 20 }}>{r.size_bytes > 0 ? (r.filename.toLowerCase().endsWith('.zip') ? '📦' : '📄') : '📁'}</span>
-                  <span className="tbsl-filename">{r.filename}</span>
+            {results.map((r, idx) => {
+              const isFolder = isFolderResult(r);
+              const href = getResultHref(r);
+              return (
+                <div
+                  key={`${r.path}-${idx}`}
+                  style={{
+                    ...styles.tableRow,
+                    gridTemplateColumns: 'minmax(120px,1fr) minmax(120px,1fr) 80px',
+                    background: (idx % 2 === 0) ? theme.color.bg : theme.color.surface,
+                  }}
+                >
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ ...styles.tableIconAndName, textDecoration: 'none', color: theme.color.text }}
+                    title={isFolder ? 'Open folder in library' : 'Open file'}
+                  >
+                    <span style={{ fontSize: 20 }}>{isFolder ? '📁' : (r.filename.toLowerCase().endsWith('.zip') ? '📦' : '📄')}</span>
+                    <span className="tbsl-filename">{r.filename}</span>
+                  </a>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: theme.color.text }}
+                    title={r.path}
+                  >
+                    {r.path}
+                  </a>
+                  <div style={{ textAlign: 'right' }}>{isFolder ? '—' : formatBytes(r.size_bytes)}</div>
                 </div>
-                <div>{r.path}</div>
-                <div style={{ textAlign: 'right' }}>{r.size_bytes > 0 ? formatBytes(r.size_bytes) : '—'}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {!loading && results.length === 0 && keyword.trim() && !error && (
             <p style={{ color: theme.color.muted, marginTop: 12 }}>No results found</p>

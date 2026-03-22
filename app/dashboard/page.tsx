@@ -2,6 +2,7 @@
 
 import AuthGate from "@/components/AuthGate";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
 import { supabase } from "@/lib/supabaseClient";
@@ -9,7 +10,19 @@ import { supabase } from "@/lib/supabaseClient";
 const _rootEnv = (process.env.NEXT_PUBLIC_S4_ROOT ?? '');
 const ROOT = _rootEnv ? (_rootEnv.endsWith('/') ? _rootEnv : _rootEnv + '/') : '';
 
+function normalizePrefixFromQuery(rawPrefix: string, rootPrefix: string): string {
+  const normalized = (rawPrefix || '').trim().replace(/^\/+/, '');
+  const root = (rootPrefix || '').trim();
+  if (!normalized) return root;
+
+  const withSlash = normalized.endsWith('/') ? normalized : `${normalized}/`;
+  if (!root) return withSlash;
+  if (withSlash.startsWith(root)) return withSlash;
+  return `${root}${withSlash}`;
+}
+
 function DashboardContent() {
+  const searchParams = useSearchParams();
   // Simple S3 browser: list folders/files and navigate prefixes.
   const [prefix, setPrefix] = useState<string>(ROOT);
   const [folders, setFolders] = useState<string[]>([]);
@@ -105,6 +118,19 @@ function DashboardContent() {
     load(prefix);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefix, accessToken]);
+
+  useEffect(() => {
+    const queryPrefix = searchParams.get('prefix') || '';
+    const normalized = normalizePrefixFromQuery(queryPrefix, ROOT);
+    if (normalized !== prefix) {
+      setPrefix(normalized);
+      setFolders([]);
+      setFiles([]);
+      setError(null);
+      setLoading(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     let unsub = () => {};
