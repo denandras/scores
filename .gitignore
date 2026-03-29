@@ -9,6 +9,7 @@ out/
 .turbo/
 .vercel/
 coverage/
+*.tsbuildinfo
 
 # Env files (keep secrets out of git)
 .env
