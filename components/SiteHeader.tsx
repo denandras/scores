@@ -122,7 +122,7 @@ export default function SiteHeader() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 0 }}>
           {/* Username (from email local-part) */}
           {!loading && username && (
-            <span title={email || undefined} style={{
+            <span className="tbsl-username" title={email || undefined} style={{
               fontSize: 14,
               color: theme.color.text,
               whiteSpace: 'nowrap',

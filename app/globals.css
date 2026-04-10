@@ -44,6 +44,9 @@ body {
   @media (max-width: 480px) {
     .tbsl-support-label { display: none; }
   }
+  @media (max-width: 720px) {
+    .tbsl-username { display: none; }
+  }
   /* Allow slightly longer filenames on mobile, truncate on larger screens */
   .tbsl-filename{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (max-width: 420px){

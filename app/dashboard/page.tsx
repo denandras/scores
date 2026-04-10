@@ -1,7 +1,7 @@
 "use client";
 
 import AuthGate from "@/components/AuthGate";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { styles, theme } from "@/components/ui/theme";
 import { formatBytes } from "@/lib/format";
@@ -30,6 +30,8 @@ function DashboardContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const loadRequestIdRef = useRef(0);
+  const loadAbortControllerRef = useRef<AbortController | null>(null);
 
   const crumbs = useMemo(() => {
     const relative = prefix.startsWith(ROOT) ? prefix.slice(ROOT.length) : prefix;
@@ -56,8 +58,14 @@ function DashboardContent() {
   const syntheticCount = (prefix !== ROOT ? 1 : 0); // Only Up row when not at root
 
   const load = async (p: string) => {
+    const requestId = ++loadRequestIdRef.current;
+    loadAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    loadAbortControllerRef.current = controller;
+
     setLoading(true);
-    setError(null as any);
+    setError(null);
+
     try {
       let allFolders: string[] = [];
       let allFiles: Array<{key:string;name:string;size:number;lastModified:string|null}> = [];
@@ -75,6 +83,7 @@ function DashboardContent() {
         const res = await fetch(`/api/s4/list${qs}`, {
           headers,
           cache: 'no-store',
+          signal: controller.signal,
         });
         if (!res.ok) {
           let serverMessage = '';
@@ -94,6 +103,8 @@ function DashboardContent() {
         token = data.nextToken || null;
       } while (token);
 
+      if (loadRequestIdRef.current !== requestId) return;
+
       // Sort folders: underscore-first, then alphabetical
       allFolders.sort((a: string, b: string) => {
         const an = a.toLowerCase();
@@ -108,9 +119,16 @@ function DashboardContent() {
       setFolders(allFolders);
       setFiles(allFiles);
     } catch (e:any) {
+      if (e?.name === 'AbortError') return;
+      if (loadRequestIdRef.current !== requestId) return;
       setError(e?.message || 'error');
     } finally {
-      setLoading(false);
+      if (loadAbortControllerRef.current === controller) {
+        loadAbortControllerRef.current = null;
+      }
+      if (loadRequestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   };
 
@@ -118,6 +136,10 @@ function DashboardContent() {
     load(prefix);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefix, accessToken]);
+
+  useEffect(() => () => {
+    loadAbortControllerRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     const queryPrefix = searchParams.get('prefix') || '';
@@ -237,6 +259,23 @@ function DashboardContent() {
                 <div style={{ textAlign: 'right' }}>
                   <a href="#" onClick={(e)=>{e.preventDefault(); go(parentPrefix);}} style={{ ...styles.buttonBase, ...styles.buttonGhost }}>Open</a>
                 </div>
+              </div>
+            )}
+
+            {loading && (
+              <div
+                style={{
+                  ...styles.tableRow,
+                  gridTemplateColumns: 'minmax(120px,1fr) 80px 80px',
+                  background: prefix !== ROOT ? theme.color.bg : theme.color.surface,
+                }}
+              >
+                <div style={{ ...styles.tableIconAndName, color: theme.color.muted }}>
+                  <span aria-hidden="true" style={{ fontSize: 18 }}>⏳</span>
+                  <span>Loading folder…</span>
+                </div>
+                <div style={{ textAlign: 'right', color: theme.color.muted }}>—</div>
+                <div style={{ textAlign: 'right', color: theme.color.muted }}>—</div>
               </div>
             )}
 
