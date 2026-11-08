@@ -14,6 +14,20 @@ type SearchResult = {
 const _s4Root = (process.env.NEXT_PUBLIC_S4_ROOT || '').trim();
 const S4_ROOT_PREFIX = _s4Root ? (_s4Root.endsWith('/') ? _s4Root : _s4Root + '/') : '';
 
+// Send the logged-in user's access token so the server can identify the
+// requester (restricted-folder visibility). Same pattern as the dashboard
+// uses for /api/s4/* calls. Anonymous → no header → restricted hidden.
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const { supabase } = await import("@/lib/supabaseClient");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) return { Authorization: `Bearer ${session.access_token}` };
+  } catch {
+    // ignore — anonymous search
+  }
+  return {};
+}
+
 function normalizePath(value: string): string {
   return (value || '').trim().replace(/^\/+/, '');
 }
@@ -89,7 +103,9 @@ function SearchContent() {
     setError(null);
     setHasSearched(true);
     try {
-      const res = await fetch(`/api/search?keyword=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`/api/search?keyword=${encodeURIComponent(trimmed)}`, {
+        headers: await getAuthHeaders(),
+      });
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
