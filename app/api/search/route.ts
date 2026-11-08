@@ -1,7 +1,7 @@
 import { getServerSupabase } from "@/lib/server/supabaseServer";
 import { getRequesterEmail } from "@/lib/server/restrictedFolderGuard";
 import { NextRequest, NextResponse } from "next/server";
-import { canAccessRestrictedPathAsync } from "@/lib/folderAccess";
+import { canAccessRestrictedPathAsync, normalizeS4Path } from "@/lib/folderAccess";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // scores_files has RLS (authenticated-only). The index is just a public
@@ -47,9 +47,14 @@ export async function GET(request: NextRequest) {
   }
 
   const rawResults = (data || []) as Array<{ path: string; filename: string; size_bytes: number }>;
+  // The index stores S3 paths RELATIVE to the scores/ prefix (e.g.
+  // "07 Trombone/..."), but restricted_folder_access rules are keyed by the
+  // FULL S4 path ("scores/07 Trombone/..."). Prepend the S4 root so rule
+  // matching sees the same shape the /api/s4/* routes use.
+  const s4Root = (process.env.NEXT_PUBLIC_S4_ROOT || '').trim();
   const visibilityChecks = await Promise.all(
     rawResults.map(async (row) => {
-      const normalizedPath = (row.path || '').replace(/^\/+/, '');
+      const normalizedPath = normalizeS4Path(s4Root + (row.path || '').replace(/^\/+/, ''));
       const canAccess = await canAccessRestrictedPathAsync(normalizedPath, requesterEmail);
       return canAccess ? row : null;
     })
